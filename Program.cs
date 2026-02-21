@@ -108,6 +108,9 @@ namespace FutaZone
                     //update renderer entities
                     // run aimbot processing (if enabled)
                     Aimbot.Instance.Process(localPlayer, entities, screenSize);
+                    
+                    // run triggerbot processing (if enabled)
+                    TriggerBot.Instance.Process(swed, client, localPlayer);
 
                     BombTimer.Update(swed, client);
                     renderer.UpdateLocalPlayer(localPlayer);

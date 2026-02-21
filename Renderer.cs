@@ -28,6 +28,7 @@ namespace FutaZone
         private bool enableLines = false;
         private bool enableBombTimer = true;
         private bool enableAimbot = false;
+        private bool enableTriggerBot = false;
         private bool showTeammates = false; // Default to not showing teammates
         private Vector4 enemyColor = new Vector4(0.6f, 0.827f, 0.0f, 1.0f); // Lime green for enemy 
 
@@ -183,6 +184,39 @@ namespace FutaZone
                         }
 
                         ImGui.Text($"Hold {keyNames[selectedIndex]} to activate aimbot pulse ({Aimbot.Instance.FOV} px)");
+                    }
+                }
+
+                // TriggerBot feature group
+                if (ImGui.CollapsingHeader("TriggerBot (自动开火)", ImGuiTreeNodeFlags.DefaultOpen))
+                {
+                    ImGui.Checkbox("Enable TriggerBot (开启自动开火)", ref enableTriggerBot);
+                    TriggerBot.Instance.Enabled = enableTriggerBot;
+                    if (enableTriggerBot)
+                    {
+                        int delay = TriggerBot.Instance.DelayMs;
+                        if (ImGui.SliderInt("Delay (延迟 ms)", ref delay, 0, 100)) TriggerBot.Instance.DelayMs = delay;
+
+                        float maxVelocity = TriggerBot.Instance.MaxVelocityThreshold;
+                        if (ImGui.SliderFloat("Max Velocity Z (最大Z轴速度)", ref maxVelocity, 0f, 50f)) TriggerBot.Instance.MaxVelocityThreshold = maxVelocity;
+
+                        bool triggerOnTeammates = TriggerBot.Instance.TriggerOnTeammates;
+                        if (ImGui.Checkbox("Trigger on Teammates (对队友开火)", ref triggerOnTeammates)) TriggerBot.Instance.TriggerOnTeammates = triggerOnTeammates;
+
+                        // Keybind selection
+                        int currentKey = TriggerBot.Instance.TriggerKey;
+                        string[] keyNames = { "LBUTTON (左键)", "RBUTTON (右键)", "MBUTTON (中键)", "XBUTTON1 (侧键1)", "XBUTTON2 (侧键2)", "SHIFT", "ALT", "CTRL" };
+                        int[] keyCodes = { 0x01, 0x02, 0x04, 0x05, 0x06, 0x10, 0x12, 0x11 };
+                        
+                        int selectedIndex = Array.IndexOf(keyCodes, currentKey);
+                        if (selectedIndex == -1) selectedIndex = 6; // Default to ALT
+
+                        if (ImGui.Combo("Trigger Key (开火按键)", ref selectedIndex, keyNames, keyNames.Length))
+                        {
+                            TriggerBot.Instance.TriggerKey = keyCodes[selectedIndex];
+                        }
+
+                        ImGui.Text($"Hold {keyNames[selectedIndex]} to activate triggerbot");
                     }
                 }
                 

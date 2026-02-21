@@ -27,6 +27,9 @@ namespace FutaZone
         public static int m_iszPlayerName;
         public static int m_modelState;
         public static int m_pGameSceneNode;
+        public static int m_iIDEntIndex;
+        public static int m_vecAbsVelocity;
+        public static int m_fFlags;
         // Bomb Timer related fields
         public static int m_flDefuseCountDown;
         public static int m_flC4Blow;
@@ -75,6 +78,9 @@ namespace FutaZone
                 m_iszPlayerName = GetFieldOffset("CBasePlayerController", "m_iszPlayerName");
                 m_modelState = GetFieldOffset("CSkeletonInstance", "m_modelState");
                 m_pGameSceneNode = GetFieldOffset("C_BaseEntity", "m_pGameSceneNode");
+                m_iIDEntIndex = GetFieldOffset("C_CSPlayerPawn", "m_iIDEntIndex");
+                m_vecAbsVelocity = GetFieldOffset("C_BaseEntity", "m_vecAbsVelocity");
+                m_fFlags = GetFieldOffset("C_BaseEntity", "m_fFlags");
                 
                 // C_PlantedC4 fields
                 m_flDefuseCountDown = GetFieldOffset("C_PlantedC4", "m_flDefuseCountDown");
