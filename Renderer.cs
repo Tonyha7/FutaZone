@@ -164,7 +164,7 @@ namespace FutaZone
 
                         // Keybind selection
                         int currentKey = Aimbot.Instance.AimKey;
-                        string[] keyNames = { "LBUTTON (左键)", "RBUTTON (右键)", "MBUTTON (中键)", "XBUTTON1 (侧键1)", "XBUTTON2 (侧键2)", "SHIFT", "ALT", "CTRL" };
+                        string[] keyNames = { "LBUTTON (左键)", "RBUTTON (右键)", "MBUTTON (中键)", "XBUTTON1 (下侧键)", "XBUTTON2 (上侧键)", "SHIFT", "ALT", "CTRL" };
                         int[] keyCodes = { 0x01, 0x02, 0x04, 0x05, 0x06, 0x10, 0x12, 0x11 };
                         
                         int selectedIndex = Array.IndexOf(keyCodes, currentKey);
@@ -206,7 +206,7 @@ namespace FutaZone
 
                         // Keybind selection
                         int currentKey = TriggerBot.Instance.TriggerKey;
-                        string[] keyNames = { "LBUTTON (左键)", "RBUTTON (右键)", "MBUTTON (中键)", "XBUTTON1 (侧键1)", "XBUTTON2 (侧键2)", "SHIFT", "ALT", "CTRL" };
+                        string[] keyNames = { "LBUTTON (左键)", "RBUTTON (右键)", "MBUTTON (中键)", "XBUTTON1 (下侧键)", "XBUTTON2 (上侧键)", "SHIFT", "ALT", "CTRL" };
                         int[] keyCodes = { 0x01, 0x02, 0x04, 0x05, 0x06, 0x10, 0x12, 0x11 };
                         
                         int selectedIndex = Array.IndexOf(keyCodes, currentKey);

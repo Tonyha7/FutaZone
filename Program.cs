@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Swed64;
@@ -10,8 +11,15 @@ namespace FutaZone
 {
     class Program
     {
+        [DllImport("winmm.dll")]
+        public static extern uint timeBeginPeriod(uint uPeriod);
+
+        [DllImport("winmm.dll")]
+        public static extern uint timeEndPeriod(uint uPeriod);
+
         static async Task Main(string[] args)
         {
+            timeBeginPeriod(1); // Set timer resolution to 1ms
             Console.WriteLine("Initializing FutaZone...");
             
             // Fetch offsets from URL
@@ -43,6 +51,8 @@ namespace FutaZone
                 Entity localPlayer = new Entity();
 
                 //esp logic
+                Stopwatch stopwatch = new Stopwatch();
+                stopwatch.Start();
                 while (true)
                 {
                     if (cs2Process.HasExited)
@@ -115,11 +125,21 @@ namespace FutaZone
                     BombTimer.Update(swed, client);
                     renderer.UpdateLocalPlayer(localPlayer);
                     renderer.UpdateEntities(entities);
-                    Thread.Sleep(1);
+                    int targetFps = 144;
+                    long targetFrameTime = 1000 / targetFps;
+                    long frameTime = stopwatch.ElapsedMilliseconds;
+                    
+                    int sleepTime = (int)(targetFrameTime - frameTime);
+                    if (sleepTime > 0)
+                    {
+                        Thread.Sleep(sleepTime);
+                    }
+                    stopwatch.Restart();
                 }
             }
             catch (Exception ex)
             {
+                timeEndPeriod(1); // Reset timer resolution
                 Console.WriteLine($"Error: {ex.Message}");
                 Console.WriteLine("Make sure CS2 is running.");
                 Environment.Exit(0);

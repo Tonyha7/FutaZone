@@ -48,7 +48,7 @@ namespace FutaZone
 
         public bool Enabled { get; set; } = false;
         public int TriggerKey { get; set; } = 0x12; // Default to ALT
-        public int DelayMs { get; set; } = 10;
+        public int DelayMs { get; set; } = 15;
         public bool TriggerOnTeammates { get; set; } = false;
         public float MaxVelocityThreshold { get; set; } = 18f;
 
