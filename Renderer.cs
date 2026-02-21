@@ -18,6 +18,7 @@ namespace FutaZone
 
         //renderer variables
         public Vector2 screenSize;
+        public float[] viewMatrix = new float[16];
         //entities copies
         public ConcurrentQueue<Entity> entities = new ConcurrentQueue<Entity>();
         private Entity localPlayer = new Entity();
@@ -40,6 +41,9 @@ namespace FutaZone
 
         private enum EspMode { Team = 0, Ffa = 1 }
         private EspMode espMode = EspMode.Team;
+
+        private enum EspStyle { FullBox = 0, CornerBox = 1, NoBox = 2, Circle3D = 3, Star3D = 4 }
+        private EspStyle espStyle = EspStyle.FullBox;
 
         //draw list
         ImDrawListPtr drawList;
@@ -133,6 +137,14 @@ namespace FutaZone
                     ImGui.Checkbox("Enable ESP (开启透视)", ref enableESP);
                     if (enableESP)
                     {
+                        // ESP Style Selection
+                        string[] styleNames = { "Full Box (全框)", "Corner Box (四角)", "No Box (无框)", "3D Circle (立体圆环)", "3D Star (立体五角星)" };
+                        int styleIndex = (int)espStyle;
+                        if (ImGui.Combo("ESP Style (透视样式)", ref styleIndex, styleNames, styleNames.Length))
+                        {
+                            espStyle = (EspStyle)styleIndex;
+                        }
+
                         ImGui.Checkbox("Enable Lines (开启射线)", ref enableLines);
                         ImGui.Checkbox("Show Teammates (显示队友)", ref showTeammates);
                         // ESP settings shown when feature expanded
@@ -168,6 +180,33 @@ namespace FutaZone
                         
                         bool aimAtTeammates = Aimbot.Instance.AimAtTeammates;
                         if (ImGui.Checkbox("Aim at Teammates (瞄准队友)", ref aimAtTeammates)) Aimbot.Instance.AimAtTeammates = aimAtTeammates;
+
+                        // Aim Mode Selection
+                        Aimbot.AimMode currentMode = Aimbot.Instance.Mode;
+                        string[] modeNames = { "Linear (线性)", "Fast->Slow (先快后慢)", "Slow->Fast (先慢后快)", "Overshoot (过顶回拉)", "Random (随机)" };
+                        int modeIndex = (int)currentMode;
+                        if (ImGui.Combo("Aim Mode (模式)", ref modeIndex, modeNames, modeNames.Length))
+                        {
+                            Aimbot.Instance.Mode = (Aimbot.AimMode)modeIndex;
+                        }
+
+                        // Randomness Settings (Duration control)
+                        if (modeIndex != 0) // If not Linear
+                        {
+                            bool randSpeed = Aimbot.Instance.RandomizeSpeed;
+                            if (ImGui.Checkbox("Randomize Duration (随机时长)", ref randSpeed)) Aimbot.Instance.RandomizeSpeed = randSpeed;
+
+                            int duration = Aimbot.Instance.SpeedChangeDuration;
+                            if (ImGui.SliderInt("Switch Duration (切换时长 ms)", ref duration, 100, 2000)) Aimbot.Instance.SpeedChangeDuration = duration;
+                        
+                            // Overshoot specific settings
+                            // Show if Overshoot (3) or Random (4) is selected
+                            if (modeIndex == 3 || modeIndex == 4)
+                            {
+                                float overshoot = Aimbot.Instance.OvershootScale;
+                                if (ImGui.SliderFloat("Overshoot Scale (过顶倍率)", ref overshoot, 1.0f, 3.0f)) Aimbot.Instance.OvershootScale = overshoot;
+                            }
+                        }
 
                         // Keybind selection
                         int currentKey = Aimbot.Instance.AimKey;
@@ -470,7 +509,104 @@ namespace FutaZone
                 boxColor = localPlayer.team == entity.team ? teamColor : enemyColor;
 
             uint col = ImGui.ColorConvertFloat4ToU32(boxColor);
-            drawList.AddRect(recTop, rectBottom, col);
+            
+            if (espStyle == EspStyle.FullBox)
+            {
+                drawList.AddRect(recTop, rectBottom, col);
+            }
+            else if (espStyle == EspStyle.CornerBox)
+            {
+                float lineW = (rectBottom.X - recTop.X) / 4;
+                float lineH = (rectBottom.Y - recTop.Y) / 4;
+                
+                // Top left
+                drawList.AddLine(new Vector2(recTop.X, recTop.Y), new Vector2(recTop.X + lineW, recTop.Y), col);
+                drawList.AddLine(new Vector2(recTop.X, recTop.Y), new Vector2(recTop.X, recTop.Y + lineH), col);
+                
+                // Top right
+                drawList.AddLine(new Vector2(rectBottom.X, recTop.Y), new Vector2(rectBottom.X - lineW, recTop.Y), col);
+                drawList.AddLine(new Vector2(rectBottom.X, recTop.Y), new Vector2(rectBottom.X, recTop.Y + lineH), col);
+                
+                // Bottom left
+                drawList.AddLine(new Vector2(recTop.X, rectBottom.Y), new Vector2(recTop.X + lineW, rectBottom.Y), col);
+                drawList.AddLine(new Vector2(recTop.X, rectBottom.Y), new Vector2(recTop.X, rectBottom.Y - lineH), col);
+                
+                // Bottom right
+                drawList.AddLine(new Vector2(rectBottom.X, rectBottom.Y), new Vector2(rectBottom.X - lineW, rectBottom.Y), col);
+                drawList.AddLine(new Vector2(rectBottom.X, rectBottom.Y), new Vector2(rectBottom.X, rectBottom.Y - lineH), col);
+            }
+            else if (espStyle == EspStyle.Circle3D)
+            {
+                int segments = 32;
+                float radius = 30.0f; // Adjust radius as needed
+                Vector2[] points = new Vector2[segments];
+                bool allOnScreen = true;
+
+                for (int i = 0; i < segments; i++)
+                {
+                    float angle = (float)(i * 2 * Math.PI / segments);
+                    Vector3 point3D = new Vector3(
+                        entity.position.X + radius * (float)Math.Cos(angle),
+                        entity.position.Y + radius * (float)Math.Sin(angle),
+                        entity.position.Z
+                    );
+
+                    Vector2 point2D = Calculate.WorldToScreen(viewMatrix, point3D, screenSize);
+                    if (point2D.X == -99 && point2D.Y == -99)
+                    {
+                        allOnScreen = false;
+                        break;
+                    }
+                    points[i] = point2D;
+                }
+
+                if (allOnScreen)
+                {
+                    for (int i = 0; i < segments; i++)
+                    {
+                        Vector2 p1 = points[i];
+                        Vector2 p2 = points[(i + 1) % segments];
+                        drawList.AddLine(p1, p2, col, 2.0f);
+                    }
+                }
+            }
+            else if (espStyle == EspStyle.Star3D)
+            {
+                float radius = 30.0f; // Adjust radius as needed
+                int starPoints = 5;
+                Vector2[] starVertices = new Vector2[starPoints];
+                bool starOnScreen = true;
+                
+                // Calculate star vertices
+                for (int i = 0; i < starPoints; i++)
+                {
+                    // Start from top (PI/2) and go clockwise
+                    float angle = (float)(Math.PI / 2 + i * 4 * Math.PI / starPoints);
+                    Vector3 point3D = new Vector3(
+                        entity.position.X + radius * (float)Math.Cos(angle),
+                        entity.position.Y + radius * (float)Math.Sin(angle),
+                        entity.position.Z
+                    );
+
+                    Vector2 point2D = Calculate.WorldToScreen(viewMatrix, point3D, screenSize);
+                    if (point2D.X == -99 && point2D.Y == -99)
+                    {
+                        starOnScreen = false;
+                        break;
+                    }
+                    starVertices[i] = point2D;
+                }
+
+                if (starOnScreen)
+                {
+                    for (int i = 0; i < starPoints; i++)
+                    {
+                        Vector2 p1 = starVertices[i];
+                        Vector2 p2 = starVertices[(i + 1) % starPoints];
+                        drawList.AddLine(p1, p2, col, 2.0f);
+                    }
+                }
+            }
 
             // Draw player name above the box if available
             if (!string.IsNullOrEmpty(entity.name))
@@ -577,6 +713,11 @@ namespace FutaZone
             {
                 localPlayer = newEntity;
             }
+        }
+
+        public void UpdateViewMatrix(float[] newViewMatrix)
+        {
+            viewMatrix = newViewMatrix;
         }
 
         void DrawOverlay(Vector2 screenSize)

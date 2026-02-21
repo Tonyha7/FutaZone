@@ -198,6 +198,7 @@ namespace FutaZone
                     BombTimer.Update(swed, client);
                     renderer.UpdateLocalPlayer(localPlayer);
                     renderer.UpdateEntities(entities);
+                    renderer.UpdateViewMatrix(viewMatrix);
                     
                     long targetFrameTime = 1000 / targetFps;
                     long frameTime = stopwatch.ElapsedMilliseconds;
