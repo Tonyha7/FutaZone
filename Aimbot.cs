@@ -64,6 +64,8 @@ namespace FutaZone
         public float Smoothness = 3.0f;     // Division factor (higher = slower/smoother)
         public float OvershootScale { get; set; } = 1.2f; // Multiplier for overshoot
 
+        public Vector2? TargetPosition { get; private set; }
+
         public Aimbot() { timer.Start(); stateTimer.Start(); }
 
         public void Process(Entity localPlayer, IEnumerable<Entity> entities, Vector2 screenSize)
@@ -72,11 +74,12 @@ namespace FutaZone
             if (timer.ElapsedMilliseconds < 10) return;
             timer.Restart();
 
-            if (!Enabled || (GetAsyncKeyState(AimKey) & 0x8000) == 0)
+            if (!Enabled)
             {
                 _errorX = 0;
                 _errorY = 0;
                 _lastTarget = null;
+                TargetPosition = null;
                 return;
             }
 
@@ -122,6 +125,8 @@ namespace FutaZone
 
             if (bestTarget != null)
             {
+                TargetPosition = targetAimPoint;
+
                 // Logic for Modes
                 if (_lastTarget != bestTarget)
                 {
@@ -233,13 +238,24 @@ namespace FutaZone
                 _errorX = totalX - moveX;
                 _errorY = totalY - moveY;
 
-                if (moveX != 0 || moveY != 0)
+                if ((GetAsyncKeyState(AimKey) & 0x8000) != 0)
                 {
-                    MoveMouse(moveX, moveY);
+                    if (moveX != 0 || moveY != 0)
+                    {
+                        MoveMouse(moveX, moveY);
+                    }
+                }
+                else
+                {
+                    // Reset error and last target if key is not pressed to restart cycle when pressed
+                    _errorX = 0;
+                    _errorY = 0;
+                    _lastTarget = null;
                 }
             }
             else
             {
+                TargetPosition = null;
                 _lastTarget = null;
             }
         }

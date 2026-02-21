@@ -30,11 +30,12 @@ namespace FutaZone
         private bool enableBombTimer = true;
         private bool enableWatermark = true;
         private bool enableAimbot = false;
+        private bool showAimTarget = false;
         private bool enableTriggerBot = false;
         private bool showTeammates = false; // Default to not showing teammates
-        private Vector4 enemyColor = new Vector4(0.6f, 0.827f, 0.0f, 1.0f); // Lime green for enemy 
+        private Vector4 enemyColor = new Vector4(1.0f, 0.6f, 0.75f, 1.0f); // Sakura pink for enemy 
 
-        private Vector4 teamColor = new Vector4(1.0f, 0.6f, 0.75f, 1.0f); // Sakura pink for team
+        private Vector4 teamColor = new Vector4(0.6f, 0.827f, 0.0f, 1.0f); // Lime green for team
         private Vector4 bonesColor = new Vector4(0.5f, 0.0f, 0.5f, 1.0f); // Deep purple for bones
 
         float boneThickness = 2.0f;
@@ -181,6 +182,8 @@ namespace FutaZone
                         bool aimAtTeammates = Aimbot.Instance.AimAtTeammates;
                         if (ImGui.Checkbox("Aim at Teammates (瞄准队友)", ref aimAtTeammates)) Aimbot.Instance.AimAtTeammates = aimAtTeammates;
 
+                        ImGui.Checkbox("Show Aim Target (显示瞄准点)", ref showAimTarget);
+
                         // Aim Mode Selection
                         Aimbot.AimMode currentMode = Aimbot.Instance.Mode;
                         string[] modeNames = { "Linear (线性)", "Fast->Slow (先快后慢)", "Slow->Fast (先慢后快)", "Overshoot (过顶回拉)", "Random (随机)" };
@@ -285,6 +288,12 @@ namespace FutaZone
                 uint circleColor = ImGui.ColorConvertFloat4ToU32(new Vector4(1.0f, 0.6f, 0.75f, 0.6f)); // Sakura pink
                 float visualRadius = Aimbot.Instance.FOV * 0.5f;
                 drawList.AddCircle(screenCenter, visualRadius, circleColor, 32, 2.0f);
+
+                if (showAimTarget && Aimbot.Instance.TargetPosition.HasValue)
+                {
+                    uint targetColor = ImGui.ColorConvertFloat4ToU32(new Vector4(1.0f, 0.0f, 0.0f, 1.0f)); // Red
+                    drawList.AddCircleFilled(Aimbot.Instance.TargetPosition.Value, 4.0f, targetColor, 16);
+                }
             }
 
             if (enableESP)
