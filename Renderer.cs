@@ -27,6 +27,7 @@ namespace FutaZone
         private bool enableESP = true;
         private bool enableLines = false;
         private bool enableBombTimer = true;
+        private bool enableWatermark = true;
         private bool enableAimbot = false;
         private bool enableTriggerBot = false;
         private bool showTeammates = false; // Default to not showing teammates
@@ -47,6 +48,12 @@ namespace FutaZone
         private bool showUI = true;
         private bool insKeyPressed = false;
         private bool styleInitialized = false;
+
+        // Watermark caching
+        private string watermarkName = "";
+        private int watermarkPing = 0;
+        private int watermarkVelocity = 0;
+        private float lastWatermarkUpdate = 0f;
 
         private void InitializeStyle()
         {
@@ -222,6 +229,7 @@ namespace FutaZone
                 }
                 
                 ImGui.Checkbox("Enable Bomb Timer (C4计时器)", ref enableBombTimer);
+                ImGui.Checkbox("Enable Watermark (水印)", ref enableWatermark);
                 if (ImGui.Checkbox("Enable VSync (垂直同步)", ref vsync)) VSync = vsync;
                 ImGui.Text("Press INS to show/hide menu (按INS显示/隐藏菜单)");
                 ImGui.End(); // End "FutaZone ESP"
@@ -284,44 +292,165 @@ namespace FutaZone
                 }
             }
 
+            if (enableWatermark)
+            {
+                DrawWatermark();
+            }
+
             if (enableBombTimer && BombTimer.IsBombPlanted)
             {
-                // C4 Timer Progress Bar
-                // Assume 40 seconds max duration for C4
+                DrawBombTimer();
+            }
+        }
+
+        private void DrawBombTimer()
+        {
+            // Set default position to top-left
+            ImGui.SetNextWindowPos(new Vector2(20, 20), ImGuiCond.FirstUseEver);
+            
+            // Sakura background for the window
+            ImGui.PushStyleColor(ImGuiCol.WindowBg, new Vector4(1.0f, 0.75f, 0.8f, 0.6f));
+            ImGui.PushStyleColor(ImGuiCol.Border, new Vector4(1.0f, 0.6f, 0.75f, 1.0f));
+            ImGui.PushStyleVar(ImGuiStyleVar.WindowRounding, 5.0f);
+            
+            // Allow dragging from body
+            ImGui.GetIO().ConfigWindowsMoveFromTitleBarOnly = false;
+
+            if (ImGui.Begin("BombTimer", ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.AlwaysAutoResize))
+            {
+                // C4 Timer Logic
                 float maxTime = 40.0f; 
                 float timeLeft = BombTimer.TimeLeft;
                 float progress = Math.Clamp(timeLeft / maxTime, 0.0f, 1.0f);
-                
-                // Bar dimensions - Full left side column
-                float barWidth = 25.0f;
-                float barMaxHeight = screenSize.Y;
-                float startX = 0.0f;
-                float startY = 0.0f;
-                
-                // Background bar (dark gray/black)
-                drawList.AddRectFilled(new Vector2(startX, startY), new Vector2(startX + barWidth, startY + barMaxHeight), ImGui.ColorConvertFloat4ToU32(new Vector4(0.0f, 0.0f, 0.0f, 0.6f)));
-                
-                // Progress bar (Green)
-                // "Shrink from bottom" -> Means the bar should be anchored at Top, and its bottom edge moves up as time decreases.
-                // At 100%, bottom is Y=ScreenHeight. At 0%, bottom is Y=0.
-                
-                Vector4 barColor = new Vector4(0.0f, 1.0f, 0.0f, 1.0f); // Green
-                float currentHeight = barMaxHeight * progress;
-                drawList.AddRectFilled(new Vector2(startX, startY), new Vector2(startX + barWidth, currentHeight), ImGui.ColorConvertFloat4ToU32(barColor));
 
-                // Text Info at Top Left
+                // Draw Text
                 string text = BombTimer.BombPlantedText;
                 if (!string.IsNullOrEmpty(BombTimer.TimerText)) text += $"\n{BombTimer.TimerText}";
                 if (!string.IsNullOrEmpty(BombTimer.DefuseText)) text += $"\n{BombTimer.DefuseText}";
-                
-                // Draw pink text to the right of the bar at the top
-                // Sakura Pink: (1.0f, 0.6f, 0.75f, 1.0f)
-                uint col = ImGui.ColorConvertFloat4ToU32(new Vector4(1.0f, 0.6f, 0.75f, 1.0f));
-                drawList.AddText(new Vector2(startX + barWidth + 10, 10), col, text);
-            }
 
-            // End the overlay and the main GUI window (end inner overlay first)
-            ImGui.End(); // End "Overlay"
+                // Draw text (Dark pink/purple for readability on light pink background)
+                ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(0.5f, 0.0f, 0.5f, 1.0f));
+                ImGui.Text(text);
+                ImGui.PopStyleColor();
+
+                // Draw Progress Bar
+                // Custom drawing for the bar to match previous style (vertical or horizontal? 
+                // Previous was vertical full screen height. Now it's a window. Let's make it a horizontal bar inside the window for better UX in a floating window)
+                
+                Vector2 barSize = new Vector2(200, 15);
+                
+                // Get cursor for custom drawing
+                Vector2 p = ImGui.GetCursorScreenPos();
+                ImDrawListPtr windowDrawList = ImGui.GetWindowDrawList();
+                
+                // Background (Darker Pink)
+                windowDrawList.AddRectFilled(p, new Vector2(p.X + barSize.X, p.Y + barSize.Y), ImGui.ColorConvertFloat4ToU32(new Vector4(0.8f, 0.5f, 0.6f, 0.6f)));
+                
+                // Foreground (Green)
+                float currentWidth = barSize.X * progress;
+                windowDrawList.AddRectFilled(p, new Vector2(p.X + currentWidth, p.Y + barSize.Y), ImGui.ColorConvertFloat4ToU32(new Vector4(0.0f, 1.0f, 0.0f, 1.0f)));
+                
+                // Advance cursor so window resizes correctly
+                ImGui.Dummy(barSize);
+            }
+            ImGui.End();
+            
+            ImGui.PopStyleVar();
+            ImGui.PopStyleColor(2);
+        }
+
+        private void DrawWatermark()
+        {
+            // Set default position to top-right
+            ImGui.SetNextWindowPos(new Vector2(screenSize.X - 300, 20), ImGuiCond.FirstUseEver);
+            
+            // Set window styling for watermark
+            ImGui.PushStyleColor(ImGuiCol.WindowBg, new Vector4(1.0f, 0.75f, 0.8f, 0.6f)); // Sakura background
+            ImGui.PushStyleColor(ImGuiCol.Border, new Vector4(1.0f, 0.6f, 0.75f, 1.0f));
+            ImGui.PushStyleVar(ImGuiStyleVar.WindowRounding, 5.0f);
+            
+            // 默认允许拖动无标题栏窗口
+            ImGui.GetIO().ConfigWindowsMoveFromTitleBarOnly = false;
+
+            // Update watermark data every frame (real-time)
+            watermarkName = string.IsNullOrEmpty(localPlayer.name) ? "" : localPlayer.name;
+            watermarkPing = localPlayer.ping;
+            watermarkVelocity = localPlayer.velocity;
+
+            if (ImGui.Begin("Watermark", ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.AlwaysAutoResize))
+            {
+                // Gradient Text for "FUTAZONE"
+                string title = "FUTAZONE";
+                float time = (float)ImGui.GetTime();
+                
+                for (int i = 0; i < title.Length; i++)
+                {
+                    float r = (float)Math.Sin(time + i * 0.1f) * 0.5f + 0.5f;
+                    float g = (float)Math.Sin(time + i * 0.1f + 2.0f) * 0.5f + 0.5f;
+                    float b = (float)Math.Sin(time + i * 0.1f + 4.0f) * 0.5f + 0.5f;
+                    
+                    ImGui.TextColored(new Vector4(r, g, b, 1.0f), title[i].ToString());
+                    ImGui.SameLine(0, 0);
+                }
+                
+                ImGui.SameLine();
+                ImGui.Text(" | ");
+                ImGui.SameLine();
+                
+                // Player Name
+                ImGui.TextColored(new Vector4(1.0f, 1.0f, 1.0f, 1.0f), watermarkName);
+                
+                ImGui.SameLine();
+                ImGui.Text(" | ");
+                ImGui.SameLine();
+                
+                // Ping
+                Vector4 pingColor;
+                if (watermarkPing <= 20)
+                {
+                    pingColor = new Vector4(0.0f, 1.0f, 0.0f, 1.0f); // Green
+                }
+                else if (watermarkPing >= 80)
+                {
+                    pingColor = new Vector4(1.0f, 0.0f, 0.0f, 1.0f); // Red
+                }
+                else
+                {
+                    // Gradient from Green (0,1,0) to Red (1,0,0)
+                    float t = (watermarkPing - 20.0f) / (80.0f - 20.0f);
+                    pingColor = new Vector4(t, 1.0f - t, 0.0f, 1.0f);
+                }
+                
+                ImGui.TextColored(pingColor, $"{watermarkPing} ms");
+
+                ImGui.SameLine();
+                ImGui.Text(" | ");
+                ImGui.SameLine();
+
+                // Velocity
+                // Gradient based on speed (0-250)
+                // 0-100: White to Yellow
+                // 100-250: Yellow to Red
+                // Or simply keep it white or sakura? Let's use a dynamic color for fun.
+                // Assuming max running speed with knife is 250.
+                
+                Vector4 velColor = new Vector4(1.0f, 1.0f, 1.0f, 1.0f); // Default White
+                if (watermarkVelocity > 0)
+                {
+                   float t = Math.Clamp(watermarkVelocity / 250.0f, 0.0f, 1.0f);
+                   // White (1,1,1) -> Sakura Pink (1, 0.6, 0.75) -> Deep Purple (0.5, 0, 0.5)
+                   // Let's just do White -> Green for now or similar to ping but inverted?
+                   // User didn't specify color, let's use a nice Cyan to Purple gradient
+                   
+                   velColor = new Vector4(1.0f - t * 0.5f, 1.0f - t, 1.0f - t, 1.0f); // White -> RED
+                }
+                
+                ImGui.TextColored(velColor, $"{watermarkVelocity} u/s");
+            }
+            ImGui.End();
+            
+            ImGui.PopStyleVar();
+            ImGui.PopStyleColor(2);
         }
 
         bool EntityOnScreen(Entity entity)

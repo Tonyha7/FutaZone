@@ -11,6 +11,48 @@ namespace FutaZone
 {
     class Program
     {
+        [DllImport("user32.dll")]
+        static extern bool EnumDisplaySettings(string deviceName, int modeNum, ref DEVMODE devMode);
+
+        const int ENUM_CURRENT_SETTINGS = -1;
+
+        [StructLayout(LayoutKind.Sequential)]
+        struct DEVMODE
+        {
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
+            public string dmDeviceName;
+            public short dmSpecVersion;
+            public short dmDriverVersion;
+            public short dmSize;
+            public short dmDriverExtra;
+            public int dmFields;
+            public int dmPositionX;
+            public int dmPositionY;
+            public int dmDisplayOrientation;
+            public int dmDisplayFixedOutput;
+            public short dmColor;
+            public short dmDuplex;
+            public short dmYResolution;
+            public short dmTTOption;
+            public short dmCollate;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
+            public string dmFormName;
+            public short dmLogPixels;
+            public int dmBitsPerPel;
+            public int dmPelsWidth;
+            public int dmPelsHeight;
+            public int dmDisplayFlags;
+            public int dmDisplayFrequency;
+            public int dmICMMethod;
+            public int dmICMIntent;
+            public int dmMediaType;
+            public int dmDitherType;
+            public int dmReserved1;
+            public int dmReserved2;
+            public int dmPanningWidth;
+            public int dmPanningHeight;
+        }
+
         [DllImport("winmm.dll")]
         public static extern uint timeBeginPeriod(uint uPeriod);
 
@@ -53,6 +95,16 @@ namespace FutaZone
                 //esp logic
                 Stopwatch stopwatch = new Stopwatch();
                 stopwatch.Start();
+
+                // Get refresh rate
+                DEVMODE dm = new DEVMODE();
+                dm.dmSize = (short)Marshal.SizeOf(typeof(DEVMODE));
+                EnumDisplaySettings(null, ENUM_CURRENT_SETTINGS, ref dm);
+                int targetFps = dm.dmDisplayFrequency;
+                if (targetFps == 0) targetFps = 144; // Fallback
+
+                Console.WriteLine($"Target FPS set to screen refresh rate: {targetFps}");
+
                 while (true)
                 {
                     if (cs2Process.HasExited)
@@ -72,6 +124,20 @@ namespace FutaZone
                     float[] viewMatrix = swed.ReadMatrix(client + Offsets.dwViewMatrix);
                     localPlayer.team = swed.ReadInt(localPlayerPawn, Offsets.m_iTeamNum);
                     localPlayer.position = swed.ReadVec(localPlayerPawn, Offsets.m_vOldOrigin);
+                    Vector3 velocity = swed.ReadVec(localPlayerPawn, Offsets.m_vecVelocity);
+                    localPlayer.velocity = (int)Math.Round(new Vector2(velocity.X, velocity.Y).Length());
+
+                    // Update local player name and ping
+                    IntPtr localPlayerController = swed.ReadPointer(client, Offsets.dwEntityList); // We need to find local player controller, but typically it is at a known index or we iterate like below.
+                    // Actually, local player controller is usually at index 1 or we can get it from dwLocalPlayerController if it exists, 
+                    // or we have to find the controller that controls the local pawn.
+                    // For simplicity, let's find it in the loop or assume it's the first one if not readily available as a direct pointer offset.
+                    // However, in the loop below we iterate all controllers. Let's just capture local player data inside the loop when we find it.
+                    
+                    // We need to reset local player name/ping in case we don't find it
+                    // localPlayer.name = "Unknown"; // Keep previous value or reset
+                    // localPlayer.ping = 0;
+
 
                     for (int i = 0; i < 64; i++)
                     {
@@ -107,10 +173,17 @@ namespace FutaZone
                         entity.maxHealth = swed.ReadInt(currentPawn + Offsets.m_iMaxHealth);
                         entity.viewPosition2D = Calculate.WorldToScreen(viewMatrix, Vector3.Add(entity.position, entity.viewOffset), screenSize);
                         entity.name = swed.ReadString(currentController, Offsets.m_iszPlayerName, 16);
+                        entity.ping = swed.ReadInt(currentController, Offsets.m_iPing);
                         entity.distance = Vector3.Distance(entity.position, localPlayer.position);
                         entity.bones = Calculate.ReadBones(boneMatrix, swed);
                         entity.bones2d = Calculate.ReadBones2D(entity.bones, viewMatrix, screenSize);
                         entity.isLocalPlayer = (currentPawn == localPlayerPawn);
+
+                        if (entity.isLocalPlayer)
+                        {
+                            localPlayer.name = entity.name;
+                            localPlayer.ping = entity.ping;
+                        }
 
                         entities.Add(entity);
                     }
@@ -125,7 +198,7 @@ namespace FutaZone
                     BombTimer.Update(swed, client);
                     renderer.UpdateLocalPlayer(localPlayer);
                     renderer.UpdateEntities(entities);
-                    int targetFps = 144;
+                    
                     long targetFrameTime = 1000 / targetFps;
                     long frameTime = stopwatch.ElapsedMilliseconds;
                     
