@@ -50,8 +50,6 @@ namespace FutaZone
 
         private void InitializeStyle()
         {
-            //Gui.GetIO().Fonts.AddFontFromFileTTF(@"c:\windows\fonts\msyh.ttc", 18.0f, null, ImGui.GetIO().Fonts.GetGlyphRangesChineseFull());
-
             ImGuiStylePtr style = ImGui.GetStyle();
             
             style.WindowRounding = 8.0f;
@@ -96,6 +94,9 @@ namespace FutaZone
             int screenWidth = GetSystemMetrics(SM_CXSCREEN);
             int screenHeight = GetSystemMetrics(SM_CYSCREEN);
             screenSize = new Vector2(screenWidth, screenHeight);
+
+            // Load Chinese font
+            ReplaceFont(@"c:\windows\fonts\msyh.ttc", 18, FontGlyphRangeType.ChineseFull);
         }
 
         protected override void Render()
