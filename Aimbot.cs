@@ -67,6 +67,11 @@ namespace FutaZone
             foreach (var e in entities)
             {
                 if (e == null) continue;
+
+                if (e.position == Vector3.Zero) continue;
+
+                // Skip spectators/observers completely for aimbot
+                if (e.team == 1) continue;
                 
                 // Check team
                 if (!AimAtTeammates && e.team == localPlayer.team) continue;

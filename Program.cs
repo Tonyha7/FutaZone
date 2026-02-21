@@ -59,6 +59,7 @@ namespace FutaZone
                     
                     //get localplayer
                     IntPtr localPlayerPawn = swed.ReadPointer(client, Offsets.dwLocalPlayerPawn);
+                    float[] viewMatrix = swed.ReadMatrix(client + Offsets.dwViewMatrix);
                     localPlayer.team = swed.ReadInt(localPlayerPawn, Offsets.m_iTeamNum);
                     localPlayer.position = swed.ReadVec(localPlayerPawn, Offsets.m_vOldOrigin);
 
@@ -82,9 +83,6 @@ namespace FutaZone
                         //check if is alive
                         int lifeState = swed.ReadInt(currentPawn, Offsets.m_lifeState);
                         if (lifeState != 256) continue;
-
-                        //get matrix
-                        float[] viewMatrix = swed.ReadMatrix(client + Offsets.dwViewMatrix);
 
                         IntPtr gameSceneNode = swed.ReadPointer(currentPawn, Offsets.m_pGameSceneNode);
                         IntPtr boneMatrix = swed.ReadPointer(gameSceneNode, Offsets.m_modelState + 0x80);
@@ -111,6 +109,7 @@ namespace FutaZone
                     // run aimbot processing (if enabled)
                     Aimbot.Instance.Process(localPlayer, entities, screenSize);
 
+                    BombTimer.Update(swed, client);
                     renderer.UpdateLocalPlayer(localPlayer);
                     renderer.UpdateEntities(entities);
                     Thread.Sleep(1);

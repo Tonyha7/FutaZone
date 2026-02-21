@@ -11,6 +11,10 @@ namespace FutaZone
         public static int dwEntityList;
         public static int dwViewMatrix;
         public static int dwLocalPlayerPawn;
+        // Bomb Timer related
+        public static int dwGlobalVars;
+        public static int dwPlantedC4;
+        public const int m_nCurrentTickThisFrame = 0x34; // Assuming constant offset
 
         // client.dll offsets
         public static int m_vOldOrigin;
@@ -23,6 +27,12 @@ namespace FutaZone
         public static int m_iszPlayerName;
         public static int m_modelState;
         public static int m_pGameSceneNode;
+        // Bomb Timer related fields
+        public static int m_flDefuseCountDown;
+        public static int m_flC4Blow;
+        public static int m_bBeingDefused;
+        public static int m_nBombSite;
+        public static int m_bBombDefused;
 
         public static async Task InitializeAsync()
         {
@@ -30,17 +40,22 @@ namespace FutaZone
             
             try
             {
-                Console.WriteLine("Fetching offsets.json...");
+                // Fetch offsets from URL directly
+                Console.WriteLine("Fetching offsets.json from URL...");
                 string offsetsJson = await client.GetStringAsync("https://ob.tonyha7.com/offsets.json");
+                
                 using JsonDocument offsetsDoc = JsonDocument.Parse(offsetsJson);
                 var clientDllOffsets = offsetsDoc.RootElement.GetProperty("client.dll");
                 
                 dwEntityList = clientDllOffsets.GetProperty("dwEntityList").GetInt32();
                 dwViewMatrix = clientDllOffsets.GetProperty("dwViewMatrix").GetInt32();
                 dwLocalPlayerPawn = clientDllOffsets.GetProperty("dwLocalPlayerPawn").GetInt32();
+                dwGlobalVars = clientDllOffsets.GetProperty("dwGlobalVars").GetInt32();
+                dwPlantedC4 = clientDllOffsets.GetProperty("dwPlantedC4").GetInt32();
 
-                Console.WriteLine("Fetching client_dll.json...");
+                Console.WriteLine("Fetching client_dll.json from URL...");
                 string clientDllJson = await client.GetStringAsync("https://ob.tonyha7.com/client_dll.json");
+                
                 using JsonDocument clientDllDoc = JsonDocument.Parse(clientDllJson);
                 var classes = clientDllDoc.RootElement.GetProperty("client.dll").GetProperty("classes");
 
@@ -60,6 +75,13 @@ namespace FutaZone
                 m_iszPlayerName = GetFieldOffset("CBasePlayerController", "m_iszPlayerName");
                 m_modelState = GetFieldOffset("CSkeletonInstance", "m_modelState");
                 m_pGameSceneNode = GetFieldOffset("C_BaseEntity", "m_pGameSceneNode");
+                
+                // C_PlantedC4 fields
+                m_flDefuseCountDown = GetFieldOffset("C_PlantedC4", "m_flDefuseCountDown");
+                m_flC4Blow = GetFieldOffset("C_PlantedC4", "m_flC4Blow");
+                m_bBeingDefused = GetFieldOffset("C_PlantedC4", "m_bBeingDefused");
+                m_nBombSite = GetFieldOffset("C_PlantedC4", "m_nBombSite");
+                m_bBombDefused = GetFieldOffset("C_PlantedC4", "m_bBombDefused");
 
                 Console.WriteLine("Offsets loaded successfully.");
             }

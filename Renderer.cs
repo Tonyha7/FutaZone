@@ -26,9 +26,11 @@ namespace FutaZone
         //GUI elements
         private bool enableESP = true;
         private bool enableLines = false;
+        private bool enableBombTimer = true;
         private bool enableAimbot = false;
         private bool showTeammates = false; // Default to not showing teammates
         private Vector4 enemyColor = new Vector4(0.6f, 0.827f, 0.0f, 1.0f); // Lime green for enemy 
+
         private Vector4 teamColor = new Vector4(1.0f, 0.6f, 0.75f, 1.0f); // Sakura pink for team
         private Vector4 bonesColor = new Vector4(0.5f, 0.0f, 0.5f, 1.0f); // Deep purple for bones
 
@@ -47,7 +49,7 @@ namespace FutaZone
 
         private void InitializeStyle()
         {
-            ImGui.GetIO().Fonts.AddFontFromFileTTF(@"c:\windows\fonts\msyh.ttc", 18.0f, null, ImGui.GetIO().Fonts.GetGlyphRangesChineseFull());
+            //Gui.GetIO().Fonts.AddFontFromFileTTF(@"c:\windows\fonts\msyh.ttc", 18.0f, null, ImGui.GetIO().Fonts.GetGlyphRangesChineseFull());
 
             ImGuiStylePtr style = ImGui.GetStyle();
             
@@ -183,6 +185,8 @@ namespace FutaZone
                         ImGui.Text($"Hold {keyNames[selectedIndex]} to activate aimbot pulse ({Aimbot.Instance.FOV} px)");
                     }
                 }
+                
+                ImGui.Checkbox("Enable Bomb Timer (C4计时器)", ref enableBombTimer);
                 if (ImGui.Checkbox("Enable VSync (垂直同步)", ref vsync)) VSync = vsync;
                 ImGui.Text("Press INS to show/hide menu (按INS显示/隐藏菜单)");
                 ImGui.End(); // End "FutaZone ESP"
@@ -209,18 +213,76 @@ namespace FutaZone
                     {
                         if (entity.isLocalPlayer) continue;
 
+                        if (entity.position == Vector3.Zero) continue;
+
                         // Skip teammates if showTeammates is false and we are in Team mode
                         if (!showTeammates && espMode == EspMode.Team && entity.team == localPlayer.team) continue;
 
+                        // Filter out huge entities (likely non-players or glitched models in casual mode)
+                        // Standard distance waist-head is ~30 units. We allow up to 60 as a generous limit.
+                        if (entity.bones != null && entity.bones.Count > 6)
+                        {
+                            float height3D = Vector3.Distance(entity.bones[0], entity.bones[6]);
+                            if (height3D > 60.0f) continue;
+                        }
+
+                        if (enableLines && entity.position2D != new Vector2(-99, -99)) DrawLine(entity);
+
                         if (EntityOnScreen(entity))
                         {
+                            // If player is an observer (Team 1), only draw head circle and skip other visuals
+                            if (entity.team == 1)
+                            {
+                                if (entity.bones2d != null && entity.bones2d.Count > 2)
+                                {
+                                    uint headColor = ImGui.ColorConvertFloat4ToU32(new Vector4(1.0f, 1.0f, 1.0f, 1.0f)); // White for observer
+                                    drawList.AddCircle(entity.bones2d[2], 5.0f, headColor);
+                                }
+                                continue;
+                            }
+
                             DrawHealthBar(entity);
                             DrawBox(entity);
-                            if (enableLines) DrawLine(entity);
                             DrawBones(entity);
                         }
                     }
                 }
+            }
+
+            if (enableBombTimer && BombTimer.IsBombPlanted)
+            {
+                // C4 Timer Progress Bar
+                // Assume 40 seconds max duration for C4
+                float maxTime = 40.0f; 
+                float timeLeft = BombTimer.TimeLeft;
+                float progress = Math.Clamp(timeLeft / maxTime, 0.0f, 1.0f);
+                
+                // Bar dimensions - Full left side column
+                float barWidth = 25.0f;
+                float barMaxHeight = screenSize.Y;
+                float startX = 0.0f;
+                float startY = 0.0f;
+                
+                // Background bar (dark gray/black)
+                drawList.AddRectFilled(new Vector2(startX, startY), new Vector2(startX + barWidth, startY + barMaxHeight), ImGui.ColorConvertFloat4ToU32(new Vector4(0.0f, 0.0f, 0.0f, 0.6f)));
+                
+                // Progress bar (Green)
+                // "Shrink from bottom" -> Means the bar should be anchored at Top, and its bottom edge moves up as time decreases.
+                // At 100%, bottom is Y=ScreenHeight. At 0%, bottom is Y=0.
+                
+                Vector4 barColor = new Vector4(0.0f, 1.0f, 0.0f, 1.0f); // Green
+                float currentHeight = barMaxHeight * progress;
+                drawList.AddRectFilled(new Vector2(startX, startY), new Vector2(startX + barWidth, currentHeight), ImGui.ColorConvertFloat4ToU32(barColor));
+
+                // Text Info at Top Left
+                string text = BombTimer.BombPlantedText;
+                if (!string.IsNullOrEmpty(BombTimer.TimerText)) text += $"\n{BombTimer.TimerText}";
+                if (!string.IsNullOrEmpty(BombTimer.DefuseText)) text += $"\n{BombTimer.DefuseText}";
+                
+                // Draw pink text to the right of the bar at the top
+                // Sakura Pink: (1.0f, 0.6f, 0.75f, 1.0f)
+                uint col = ImGui.ColorConvertFloat4ToU32(new Vector4(1.0f, 0.6f, 0.75f, 1.0f));
+                drawList.AddText(new Vector2(startX + barWidth + 10, 10), col, text);
             }
 
             // End the overlay and the main GUI window (end inner overlay first)
