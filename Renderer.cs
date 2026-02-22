@@ -44,6 +44,10 @@ namespace FutaZone
 
         float boneThickness = 2.0f;
 
+        private enum Language { English = 0, Chinese = 1 }
+        private Language currentLanguage = Language.English;
+        private bool fontLoaded = false;
+
         private enum EspMode { Team = 0, Ffa = 1 }
         private EspMode espMode = EspMode.Team;
 
@@ -101,6 +105,19 @@ namespace FutaZone
             style.Colors[(int)ImGuiCol.Text] = new Vector4(0.3f, 0.1f, 0.2f, 1.0f); // Dark pinkish text
         }
 
+        private void LoadFontForLanguage(Language lang)
+        {
+            if (lang == Language.Chinese && !fontLoaded)
+            {
+                try 
+                {
+                    ReplaceFont(@"c:\windows\fonts\msyh.ttc", 18, FontGlyphRangeType.ChineseFull);
+                    fontLoaded = true;
+                }
+                catch { /* Handle font loading error if needed */ }
+            }
+        }
+
         public Renderer()
         {
             // Enable VSync
@@ -111,8 +128,19 @@ namespace FutaZone
             int screenHeight = GetSystemMetrics(SM_CYSCREEN);
             screenSize = new Vector2(screenWidth, screenHeight);
 
-            // Load Chinese font
-            ReplaceFont(@"c:\windows\fonts\msyh.ttc", 18, FontGlyphRangeType.ChineseFull);
+            // Detect system language
+            var culture = System.Globalization.CultureInfo.CurrentUICulture;
+            if (culture.Name.StartsWith("zh", StringComparison.OrdinalIgnoreCase))
+            {
+                currentLanguage = Language.Chinese;
+            }
+            else
+            {
+                currentLanguage = Language.English;
+            }
+
+            // Initial font load if Chinese
+            LoadFontForLanguage(currentLanguage);
         }
 
         protected override void Render()
@@ -136,78 +164,97 @@ namespace FutaZone
             {
                 ImGui.Begin("FutaZone");
 
-                // ESP feature group
-                if (ImGui.CollapsingHeader("ESP (透视)", ImGuiTreeNodeFlags.DefaultOpen))
+                // Language Selection
+                string[] langNames = { "English", "Chinese (中文)" };
+                int langIndex = (int)currentLanguage;
+                if (ImGui.Combo("Language (语言)", ref langIndex, langNames, langNames.Length))
                 {
-                    ImGui.Checkbox("Enable ESP (开启透视)", ref enableESP);
-                    ImGui.Checkbox("Enable SoundESP (声音透视)", ref enableSoundESP);
+                    currentLanguage = (Language)langIndex;
+                    LoadFontForLanguage(currentLanguage);
+                }
+                ImGui.Separator();
+
+                // Strings based on language
+                bool isCN = currentLanguage == Language.Chinese;
+
+                // ESP feature group
+                if (ImGui.CollapsingHeader(isCN ? "ESP (透视)" : "ESP Visuals", ImGuiTreeNodeFlags.DefaultOpen))
+                {
+                    ImGui.Checkbox(isCN ? "Enable ESP (开启透视)" : "Enable ESP", ref enableESP);
+                    ImGui.Checkbox(isCN ? "Enable SoundESP (声音透视)" : "Enable SoundESP", ref enableSoundESP);
                     
                     if (enableESP || enableSoundESP)
                     {
                         if (enableESP)
                         {
                             // ESP Style Selection
-                            string[] styleNames = { "Full Box (全框)", "Corner Box (四角)", "No Box (无框)", "3D Circle (立体圆环)", "3D Star (立体五角星)" };
+                            string[] styleNames = isCN 
+                                ? new[] { "Full Box (全框)", "Corner Box (四角)", "No Box (无框)", "3D Circle (立体圆环)", "3D Star (立体五角星)" }
+                                : new[] { "Full Box", "Corner Box", "No Box", "3D Circle", "3D Star" };
+                                
                             int styleIndex = (int)espStyle;
-                            if (ImGui.Combo("ESP Style (透视样式)", ref styleIndex, styleNames, styleNames.Length))
+                            if (ImGui.Combo(isCN ? "ESP Style (透视样式)" : "ESP Style", ref styleIndex, styleNames, styleNames.Length))
                             {
                                 espStyle = (EspStyle)styleIndex;
                             }
 
-                            ImGui.Checkbox("Enable Lines (开启射线)", ref enableLines);
+                            ImGui.Checkbox(isCN ? "Enable Lines (开启射线)" : "Enable Snaplines", ref enableLines);
                         }
                         
-                        ImGui.Checkbox("Show Teammates (显示队友)", ref showTeammates);
+                        ImGui.Checkbox(isCN ? "Show Teammates (显示队友)" : "Show Teammates", ref showTeammates);
                         
                         // ESP settings shown when feature expanded
-                        ImGui.Text("Mode (模式):");
+                        ImGui.Text(isCN ? "Mode (模式):" : "Mode:");
                         ImGui.SameLine();
                         // Team or FFA mode toggle
                         bool isTeam = espMode == EspMode.Team;
-                        if (ImGui.RadioButton("Team (团队)", isTeam)) espMode = EspMode.Team;
+                        if (ImGui.RadioButton(isCN ? "Team (团队)" : "Team", isTeam)) espMode = EspMode.Team;
                         ImGui.SameLine();
                         bool isFfa = espMode == EspMode.Ffa;
-                        if (ImGui.RadioButton("FFA (死斗)", isFfa)) espMode = EspMode.Ffa;
+                        if (ImGui.RadioButton(isCN ? "FFA (死斗)" : "FFA", isFfa)) espMode = EspMode.Ffa;
 
                         if (enableESP)
                         {
                             // color pickers
-                            ImGui.ColorEdit4("Team Color (队伍颜色)", ref teamColor);
-                            ImGui.ColorEdit4("Enemy Color (敌人颜色)", ref enemyColor);
-                            ImGui.ColorEdit4("Bones Color (骨骼颜色)", ref bonesColor);
+                            ImGui.ColorEdit4(isCN ? "Team Color (队伍颜色)" : "Team Color", ref teamColor);
+                            ImGui.ColorEdit4(isCN ? "Enemy Color (敌人颜色)" : "Enemy Color", ref enemyColor);
+                            ImGui.ColorEdit4(isCN ? "Bones Color (骨骼颜色)" : "Bone Color", ref bonesColor);
                         }
                         
                         if (enableSoundESP)
                         {
-                            ImGui.ColorEdit4("SoundESP Color (声音透视颜色)", ref soundESPColor);
+                            ImGui.ColorEdit4(isCN ? "SoundESP Color (声音透视颜色)" : "SoundESP Color", ref soundESPColor);
                         }
                     }
                 }
 
                 // Aimbot feature group
-                if (ImGui.CollapsingHeader("Aimbot (自瞄)", ImGuiTreeNodeFlags.DefaultOpen))
+                if (ImGui.CollapsingHeader(isCN ? "Aimbot (自瞄)" : "Aimbot", ImGuiTreeNodeFlags.DefaultOpen))
                 {
-                    ImGui.Checkbox("Enable Aimbot (开启自瞄)", ref enableAimbot);
+                    ImGui.Checkbox(isCN ? "Enable Aimbot (开启自瞄)" : "Enable Aimbot", ref enableAimbot);
                     Aimbot.Instance.Enabled = enableAimbot;
                     if (enableAimbot)
                     {
                         // simple aimbot settings
                         float fov = Aimbot.Instance.FOV;
-                        if (ImGui.SliderFloat("FOV (范围)", ref fov, 32f, 800f)) Aimbot.Instance.FOV = fov;
+                        if (ImGui.SliderFloat(isCN ? "FOV (范围)" : "FOV", ref fov, 32f, 800f)) Aimbot.Instance.FOV = fov;
                         
                         float smoothness = Aimbot.Instance.Smoothness;
-                        if (ImGui.SliderFloat("Smoothness (平滑度)", ref smoothness, 0.1f, 50.0f)) Aimbot.Instance.Smoothness = smoothness;
+                        if (ImGui.SliderFloat(isCN ? "Smoothness (平滑度)" : "Smoothness", ref smoothness, 0.1f, 50.0f)) Aimbot.Instance.Smoothness = smoothness;
                         
                         bool aimAtTeammates = Aimbot.Instance.AimAtTeammates;
-                        if (ImGui.Checkbox("Aim at Teammates (瞄准队友)", ref aimAtTeammates)) Aimbot.Instance.AimAtTeammates = aimAtTeammates;
+                        if (ImGui.Checkbox(isCN ? "Aim at Teammates (瞄准队友)" : "Aim at Teammates", ref aimAtTeammates)) Aimbot.Instance.AimAtTeammates = aimAtTeammates;
 
-                        ImGui.Checkbox("Show Aim Target (显示瞄准点)", ref showAimTarget);
+                        ImGui.Checkbox(isCN ? "Show Aim Target (显示瞄准点)" : "Show Aim Target", ref showAimTarget);
 
                         // Aim Mode Selection
                         Aimbot.AimMode currentMode = Aimbot.Instance.Mode;
-                        string[] modeNames = { "Linear (线性)", "Fast->Slow (先快后慢)", "Slow->Fast (先慢后快)", "Overshoot (过顶回拉)", "Random (随机)" };
+                        string[] modeNames = isCN 
+                            ? new[] { "Linear (线性)", "Fast->Slow (先快后慢)", "Slow->Fast (先慢后快)", "Overshoot (过顶回拉)", "Random (随机)" }
+                            : new[] { "Linear", "Fast->Slow", "Slow->Fast", "Overshoot", "Random" };
+                            
                         int modeIndex = (int)currentMode;
-                        if (ImGui.Combo("Aim Mode (模式)", ref modeIndex, modeNames, modeNames.Length))
+                        if (ImGui.Combo(isCN ? "Aim Mode (模式)" : "Aim Mode", ref modeIndex, modeNames, modeNames.Length))
                         {
                             Aimbot.Instance.Mode = (Aimbot.AimMode)modeIndex;
                         }
@@ -216,38 +263,43 @@ namespace FutaZone
                         if (modeIndex != 0) // If not Linear
                         {
                             bool randSpeed = Aimbot.Instance.RandomizeSpeed;
-                            if (ImGui.Checkbox("Randomize Duration (随机时长)", ref randSpeed)) Aimbot.Instance.RandomizeSpeed = randSpeed;
+                            if (ImGui.Checkbox(isCN ? "Randomize Duration (随机时长)" : "Randomize Duration", ref randSpeed)) Aimbot.Instance.RandomizeSpeed = randSpeed;
 
                             int duration = Aimbot.Instance.SpeedChangeDuration;
-                            if (ImGui.SliderInt("Switch Duration (切换时长 ms)", ref duration, 100, 2000)) Aimbot.Instance.SpeedChangeDuration = duration;
+                            if (ImGui.SliderInt(isCN ? "Switch Duration (切换时长 ms)" : "Switch Duration (ms)", ref duration, 100, 2000)) Aimbot.Instance.SpeedChangeDuration = duration;
                         
                             // Overshoot specific settings
                             // Show if Overshoot (3) or Random (4) is selected
                             if (modeIndex == 3 || modeIndex == 4)
                             {
                                 float overshoot = Aimbot.Instance.OvershootScale;
-                                if (ImGui.SliderFloat("Overshoot Scale (过顶倍率)", ref overshoot, 1.0f, 3.0f)) Aimbot.Instance.OvershootScale = overshoot;
+                                if (ImGui.SliderFloat(isCN ? "Overshoot Scale (过顶倍率)" : "Overshoot Scale", ref overshoot, 1.0f, 3.0f)) Aimbot.Instance.OvershootScale = overshoot;
                             }
                         }
 
                         // Keybind selection
                         int currentKey = Aimbot.Instance.AimKey;
-                        string[] keyNames = { "LBUTTON (左键)", "RBUTTON (右键)", "MBUTTON (中键)", "XBUTTON1 (下侧键)", "XBUTTON2 (上侧键)", "SHIFT", "ALT", "CTRL" };
+                        string[] keyNames = isCN 
+                            ? new[] { "LBUTTON (左键)", "RBUTTON (右键)", "MBUTTON (中键)", "XBUTTON1 (下侧键)", "XBUTTON2 (上侧键)", "SHIFT", "ALT", "CTRL" }
+                            : new[] { "LBUTTON", "RBUTTON", "MBUTTON", "XBUTTON1", "XBUTTON2", "SHIFT", "ALT", "CTRL" };
+                            
                         int[] keyCodes = { 0x01, 0x02, 0x04, 0x05, 0x06, 0x10, 0x12, 0x11 };
                         
                         int selectedIndex = Array.IndexOf(keyCodes, currentKey);
                         if (selectedIndex == -1) selectedIndex = 5; // Default to SHIFT
 
-                        if (ImGui.Combo("Aim Key (自瞄按键)", ref selectedIndex, keyNames, keyNames.Length))
+                        if (ImGui.Combo(isCN ? "Aim Key (自瞄按键)" : "Aim Key", ref selectedIndex, keyNames, keyNames.Length))
                         {
                             Aimbot.Instance.AimKey = keyCodes[selectedIndex];
                         }
 
                         // Bone selection
                         int currentBoneIndex = Aimbot.Instance.TargetBoneIndex;
-                        string[] boneNames = { "Waist (腰部)", "Neck (颈部)", "Head (头部)", "ShoulderL (左肩)", "ForeL (左前臂)", "HandL (左手)", "ShoulderR (右肩)", "ForeR (右前臂)", "HandR (右手)", "KneeL (左膝)", "FeetL (左脚)", "KneeR (右膝)", "FeetR (右脚)" };
+                        string[] boneNames = isCN 
+                            ? new[] { "Waist (腰部)", "Neck (颈部)", "Head (头部)", "ShoulderL (左肩)", "ForeL (左前臂)", "HandL (左手)", "ShoulderR (右肩)", "ForeR (右前臂)", "HandR (右手)", "KneeL (左膝)", "FeetL (左脚)", "KneeR (右膝)", "FeetR (右脚)" }
+                            : new[] { "Waist", "Neck", "Head", "ShoulderL", "ForeL", "HandL", "ShoulderR", "ForeR", "HandR", "KneeL", "FeetL", "KneeR", "FeetR" };
                         
-                        if (ImGui.Combo("Aim Bone (自瞄部位)", ref currentBoneIndex, boneNames, boneNames.Length))
+                        if (ImGui.Combo(isCN ? "Aim Bone (自瞄部位)" : "Aim Bone", ref currentBoneIndex, boneNames, boneNames.Length))
                         {
                             Aimbot.Instance.TargetBoneIndex = currentBoneIndex;
                         }
@@ -257,30 +309,33 @@ namespace FutaZone
                 }
 
                 // TriggerBot feature group
-                if (ImGui.CollapsingHeader("TriggerBot (自动开火)", ImGuiTreeNodeFlags.DefaultOpen))
+                if (ImGui.CollapsingHeader(isCN ? "TriggerBot (自动开火)" : "TriggerBot", ImGuiTreeNodeFlags.DefaultOpen))
                 {
-                    ImGui.Checkbox("Enable TriggerBot (开启自动开火)", ref enableTriggerBot);
+                    ImGui.Checkbox(isCN ? "Enable TriggerBot (开启自动开火)" : "Enable TriggerBot", ref enableTriggerBot);
                     TriggerBot.Instance.Enabled = enableTriggerBot;
                     if (enableTriggerBot)
                     {
                         int delay = TriggerBot.Instance.DelayMs;
-                        if (ImGui.SliderInt("Delay (延迟 ms)", ref delay, 0, 100)) TriggerBot.Instance.DelayMs = delay;
+                        if (ImGui.SliderInt(isCN ? "Delay (延迟 ms)" : "Delay (ms)", ref delay, 0, 100)) TriggerBot.Instance.DelayMs = delay;
 
                         float maxVelocity = TriggerBot.Instance.MaxVelocityThreshold;
-                        if (ImGui.SliderFloat("Max Velocity Z (最大Z轴速度)", ref maxVelocity, 0f, 50f)) TriggerBot.Instance.MaxVelocityThreshold = maxVelocity;
+                        if (ImGui.SliderFloat(isCN ? "Max Velocity Z (最大Z轴速度)" : "Max Velocity Z", ref maxVelocity, 0f, 50f)) TriggerBot.Instance.MaxVelocityThreshold = maxVelocity;
 
                         bool triggerOnTeammates = TriggerBot.Instance.TriggerOnTeammates;
-                        if (ImGui.Checkbox("Trigger on Teammates (对队友开火)", ref triggerOnTeammates)) TriggerBot.Instance.TriggerOnTeammates = triggerOnTeammates;
+                        if (ImGui.Checkbox(isCN ? "Trigger on Teammates (对队友开火)" : "Trigger on Teammates", ref triggerOnTeammates)) TriggerBot.Instance.TriggerOnTeammates = triggerOnTeammates;
 
                         // Keybind selection
                         int currentKey = TriggerBot.Instance.TriggerKey;
-                        string[] keyNames = { "LBUTTON (左键)", "RBUTTON (右键)", "MBUTTON (中键)", "XBUTTON1 (下侧键)", "XBUTTON2 (上侧键)", "SHIFT", "ALT", "CTRL" };
+                        string[] keyNames = isCN 
+                            ? new[] { "LBUTTON (左键)", "RBUTTON (右键)", "MBUTTON (中键)", "XBUTTON1 (下侧键)", "XBUTTON2 (上侧键)", "SHIFT", "ALT", "CTRL" }
+                            : new[] { "LBUTTON", "RBUTTON", "MBUTTON", "XBUTTON1", "XBUTTON2", "SHIFT", "ALT", "CTRL" };
+                        
                         int[] keyCodes = { 0x01, 0x02, 0x04, 0x05, 0x06, 0x10, 0x12, 0x11 };
                         
                         int selectedIndex = Array.IndexOf(keyCodes, currentKey);
                         if (selectedIndex == -1) selectedIndex = 6; // Default to ALT
 
-                        if (ImGui.Combo("Trigger Key (开火按键)", ref selectedIndex, keyNames, keyNames.Length))
+                        if (ImGui.Combo(isCN ? "Trigger Key (开火按键)" : "Trigger Key", ref selectedIndex, keyNames, keyNames.Length))
                         {
                             TriggerBot.Instance.TriggerKey = keyCodes[selectedIndex];
                         }
@@ -290,25 +345,25 @@ namespace FutaZone
                 }
 
                 // AutoStop feature group
-                if (ImGui.CollapsingHeader("AutoStop (自动急停)", ImGuiTreeNodeFlags.DefaultOpen))
+                if (ImGui.CollapsingHeader(isCN ? "AutoStop (自动急停)" : "AutoStop", ImGuiTreeNodeFlags.DefaultOpen))
                 {
-                    ImGui.Checkbox("Enable AutoStop (开启自动急停)", ref enableAutoStop);
+                    ImGui.Checkbox(isCN ? "Enable AutoStop (开启自动急停)" : "Enable AutoStop", ref enableAutoStop);
                     AutoStop.Instance.Enabled = enableAutoStop;
                     if (enableAutoStop)
                     {
                         float trigger = AutoStop.Instance.TriggerThreshold;
                         float stop = AutoStop.Instance.StopThreshold;
                         
-                        if (ImGui.SliderFloat("Trigger Speed (触发速度)", ref trigger, 10f, 250f)) AutoStop.Instance.TriggerThreshold = trigger;
-                        if (ImGui.SliderFloat("Stop Speed (停止速度)", ref stop, 0f, 100f)) AutoStop.Instance.StopThreshold = stop;
+                        if (ImGui.SliderFloat(isCN ? "Trigger Speed (触发速度)" : "Trigger Speed", ref trigger, 10f, 250f)) AutoStop.Instance.TriggerThreshold = trigger;
+                        if (ImGui.SliderFloat(isCN ? "Stop Speed (停止速度)" : "Stop Speed", ref stop, 0f, 100f)) AutoStop.Instance.StopThreshold = stop;
                     }
                 }
                 
-                ImGui.Checkbox("Enable HitSound (击中提示音)", ref enableHitSound);
-                ImGui.Checkbox("Enable Bomb Timer (C4计时器)", ref enableBombTimer);
-                ImGui.Checkbox("Enable Watermark (水印)", ref enableWatermark);
-                if (ImGui.Checkbox("Enable VSync (垂直同步)", ref vsync)) VSync = vsync;
-                ImGui.Text("Press INS to show/hide menu (按INS显示/隐藏菜单)");
+                ImGui.Checkbox(isCN ? "Enable HitSound (击中提示音)" : "Enable HitSound", ref enableHitSound);
+                ImGui.Checkbox(isCN ? "Enable Bomb Timer (C4计时器)" : "Enable Bomb Timer", ref enableBombTimer);
+                ImGui.Checkbox(isCN ? "Enable Watermark (水印)" : "Enable Watermark", ref enableWatermark);
+                if (ImGui.Checkbox(isCN ? "Enable VSync (垂直同步)" : "Enable VSync", ref vsync)) VSync = vsync;
+                ImGui.Text(isCN ? "Press INS to show/hide menu (按INS显示/隐藏菜单)" : "Press INS to show/hide menu");
                 ImGui.End(); // End "FutaZone ESP"
             }
 
