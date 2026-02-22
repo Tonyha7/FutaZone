@@ -125,7 +125,11 @@ namespace FutaZone
                     localPlayer.team = swed.ReadInt(localPlayerPawn, Offsets.m_iTeamNum);
                     localPlayer.position = swed.ReadVec(localPlayerPawn, Offsets.m_vOldOrigin);
                     Vector3 velocity = swed.ReadVec(localPlayerPawn, Offsets.m_vecVelocity);
+                    localPlayer.velocityVec = velocity;
                     localPlayer.velocity = (int)Math.Round(new Vector2(velocity.X, velocity.Y).Length());
+                    
+                    Vector3 viewAngles = swed.ReadVec(client, Offsets.dwViewAngles);
+                    localPlayer.viewAngles = new Vector2(viewAngles.X, viewAngles.Y);
 
                     // Update local player name and ping
                     IntPtr localPlayerController = swed.ReadPointer(client, Offsets.dwEntityList); // We need to find local player controller, but typically it is at a known index or we iterate like below.
@@ -194,6 +198,9 @@ namespace FutaZone
                     
                     // run triggerbot processing (if enabled)
                     TriggerBot.Instance.Process(swed, client, localPlayer);
+
+                    // run autostop processing (if enabled)
+                    AutoStop.Instance.Process(localPlayer);
 
                     BombTimer.Update(swed, client);
                     renderer.UpdateLocalPlayer(localPlayer);

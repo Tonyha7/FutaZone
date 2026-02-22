@@ -11,10 +11,10 @@ namespace FutaZone
         public static int dwEntityList;
         public static int dwViewMatrix;
         public static int dwLocalPlayerPawn;
+        public static int dwViewAngles;
         // Bomb Timer related
         public static int dwGlobalVars;
         public static int dwPlantedC4;
-        public const int m_nCurrentTickThisFrame = 0x34; // Assuming constant offset
 
         // client.dll offsets
         public static int m_vOldOrigin;
@@ -55,6 +55,7 @@ namespace FutaZone
                 dwEntityList = clientDllOffsets.GetProperty("dwEntityList").GetInt32();
                 dwViewMatrix = clientDllOffsets.GetProperty("dwViewMatrix").GetInt32();
                 dwLocalPlayerPawn = clientDllOffsets.GetProperty("dwLocalPlayerPawn").GetInt32();
+                dwViewAngles = clientDllOffsets.GetProperty("dwViewAngles").GetInt32();
                 dwGlobalVars = clientDllOffsets.GetProperty("dwGlobalVars").GetInt32();
                 dwPlantedC4 = clientDllOffsets.GetProperty("dwPlantedC4").GetInt32();
 

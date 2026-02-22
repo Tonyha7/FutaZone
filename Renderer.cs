@@ -32,6 +32,7 @@ namespace FutaZone
         private bool enableAimbot = false;
         private bool showAimTarget = false;
         private bool enableTriggerBot = false;
+        private bool enableAutoStop = false;
         private bool showTeammates = false; // Default to not showing teammates
         private Vector4 enemyColor = new Vector4(1.0f, 0.6f, 0.75f, 1.0f); // Sakura pink for enemy 
 
@@ -267,6 +268,21 @@ namespace FutaZone
                         }
 
                         ImGui.Text($"Hold {keyNames[selectedIndex]} to activate triggerbot");
+                    }
+                }
+
+                // AutoStop feature group
+                if (ImGui.CollapsingHeader("AutoStop (自动急停)", ImGuiTreeNodeFlags.DefaultOpen))
+                {
+                    ImGui.Checkbox("Enable AutoStop (开启自动急停)", ref enableAutoStop);
+                    AutoStop.Instance.Enabled = enableAutoStop;
+                    if (enableAutoStop)
+                    {
+                        float trigger = AutoStop.Instance.TriggerThreshold;
+                        float stop = AutoStop.Instance.StopThreshold;
+                        
+                        if (ImGui.SliderFloat("Trigger Speed (触发速度)", ref trigger, 10f, 250f)) AutoStop.Instance.TriggerThreshold = trigger;
+                        if (ImGui.SliderFloat("Stop Speed (停止速度)", ref stop, 0f, 100f)) AutoStop.Instance.StopThreshold = stop;
                     }
                 }
                 

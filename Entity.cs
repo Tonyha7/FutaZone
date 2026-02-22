@@ -14,6 +14,8 @@ namespace FutaZone
         public float distance { get; set; }
         public int ping { get; set; }
         public int velocity { get; set; }
+        public Vector3 velocityVec { get; set; }
+        public Vector2 viewAngles { get; set; }
         public int team { get; set; }
 
         public int health { get; set; }
