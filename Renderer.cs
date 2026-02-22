@@ -33,11 +33,13 @@ namespace FutaZone
         private bool showAimTarget = false;
         private bool enableTriggerBot = false;
         private bool enableAutoStop = false;
+        private bool enableSoundESP = false;
         private bool showTeammates = false; // Default to not showing teammates
         private Vector4 enemyColor = new Vector4(1.0f, 0.6f, 0.75f, 1.0f); // Sakura pink for enemy 
 
         private Vector4 teamColor = new Vector4(0.6f, 0.827f, 0.0f, 1.0f); // Lime green for team
         private Vector4 bonesColor = new Vector4(0.5f, 0.0f, 0.5f, 1.0f); // Deep purple for bones
+        private Vector4 soundESPColor = new Vector4(1.0f, 0.0f, 0.0f, 1.0f); // Red for SoundESP
 
         float boneThickness = 2.0f;
 
@@ -137,18 +139,25 @@ namespace FutaZone
                 if (ImGui.CollapsingHeader("ESP (透视)", ImGuiTreeNodeFlags.DefaultOpen))
                 {
                     ImGui.Checkbox("Enable ESP (开启透视)", ref enableESP);
-                    if (enableESP)
+                    ImGui.Checkbox("Enable SoundESP (声音透视)", ref enableSoundESP);
+                    
+                    if (enableESP || enableSoundESP)
                     {
-                        // ESP Style Selection
-                        string[] styleNames = { "Full Box (全框)", "Corner Box (四角)", "No Box (无框)", "3D Circle (立体圆环)", "3D Star (立体五角星)" };
-                        int styleIndex = (int)espStyle;
-                        if (ImGui.Combo("ESP Style (透视样式)", ref styleIndex, styleNames, styleNames.Length))
+                        if (enableESP)
                         {
-                            espStyle = (EspStyle)styleIndex;
-                        }
+                            // ESP Style Selection
+                            string[] styleNames = { "Full Box (全框)", "Corner Box (四角)", "No Box (无框)", "3D Circle (立体圆环)", "3D Star (立体五角星)" };
+                            int styleIndex = (int)espStyle;
+                            if (ImGui.Combo("ESP Style (透视样式)", ref styleIndex, styleNames, styleNames.Length))
+                            {
+                                espStyle = (EspStyle)styleIndex;
+                            }
 
-                        ImGui.Checkbox("Enable Lines (开启射线)", ref enableLines);
+                            ImGui.Checkbox("Enable Lines (开启射线)", ref enableLines);
+                        }
+                        
                         ImGui.Checkbox("Show Teammates (显示队友)", ref showTeammates);
+                        
                         // ESP settings shown when feature expanded
                         ImGui.Text("Mode (模式):");
                         ImGui.SameLine();
@@ -159,10 +168,18 @@ namespace FutaZone
                         bool isFfa = espMode == EspMode.Ffa;
                         if (ImGui.RadioButton("FFA (死斗)", isFfa)) espMode = EspMode.Ffa;
 
-                        // color pickers
-                        ImGui.ColorEdit4("Team Color (队伍颜色)", ref teamColor);
-                        ImGui.ColorEdit4("Enemy Color (敌人颜色)", ref enemyColor);
-                        ImGui.ColorEdit4("Bones Color (骨骼颜色)", ref bonesColor);
+                        if (enableESP)
+                        {
+                            // color pickers
+                            ImGui.ColorEdit4("Team Color (队伍颜色)", ref teamColor);
+                            ImGui.ColorEdit4("Enemy Color (敌人颜色)", ref enemyColor);
+                            ImGui.ColorEdit4("Bones Color (骨骼颜色)", ref bonesColor);
+                        }
+                        
+                        if (enableSoundESP)
+                        {
+                            ImGui.ColorEdit4("SoundESP Color (声音透视颜色)", ref soundESPColor);
+                        }
                     }
                 }
 
@@ -312,7 +329,7 @@ namespace FutaZone
                 }
             }
 
-            if (enableESP)
+            if (enableESP || enableSoundESP)
             {
                 lock (entityLock)
                 {
@@ -333,26 +350,39 @@ namespace FutaZone
                             if (height3D > 60.0f) continue;
                         }
 
-                        if (enableLines && entity.position2D != new Vector2(-99, -99)) DrawLine(entity);
-
-                        if (EntityOnScreen(entity))
+                        if (enableSoundESP)
                         {
-                            // If player is an observer (Team 1), only draw head circle and skip other visuals
-                            if (entity.team == 1)
-                            {
-                                if (entity.bones2d != null && entity.bones2d.Count > 2)
-                                {
-                                    uint headColor = ImGui.ColorConvertFloat4ToU32(new Vector4(1.0f, 1.0f, 1.0f, 1.0f)); // White for observer
-                                    drawList.AddCircle(entity.bones2d[2], 5.0f, headColor);
-                                }
-                                continue;
-                            }
+                            SoundESP.ProcessSound(entity, localPlayer);
+                        }
 
-                            DrawHealthBar(entity);
-                            DrawBox(entity);
-                            DrawBones(entity);
+                        if (enableESP)
+                        {
+                            if (enableLines && entity.position2D != new Vector2(-99, -99)) DrawLine(entity);
+
+                            if (EntityOnScreen(entity))
+                            {
+                                // If player is an observer (Team 1), only draw head circle and skip other visuals
+                                if (entity.team == 1 || entity.team == 0)
+                                {
+                                    if (entity.bones2d != null && entity.bones2d.Count > 2)
+                                    {
+                                        uint headColor = ImGui.ColorConvertFloat4ToU32(new Vector4(1.0f, 1.0f, 1.0f, 1.0f)); // White for observer
+                                        drawList.AddCircle(entity.bones2d[2], 5.0f, headColor);
+                                    }
+                                    continue;
+                                }
+
+                                DrawHealthBar(entity);
+                                DrawBox(entity);
+                                DrawBones(entity);
+                            }
                         }
                     }
+                }
+                
+                if (enableSoundESP)
+                {
+                    SoundESP.Render(viewMatrix, screenSize, drawList, soundESPColor);
                 }
             }
 

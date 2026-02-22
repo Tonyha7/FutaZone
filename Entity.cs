@@ -21,6 +21,10 @@ namespace FutaZone
         public int health { get; set; }
         public int maxHealth { get; set; }
 
+        public float emitSoundTime { get; set; }
+        public uint flags { get; set; }
+        public long controllerAddress { get; set; }
+
         public string name { get; set; } = string.Empty;
         public bool isLocalPlayer { get; set; }
     }

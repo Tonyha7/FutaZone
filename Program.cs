@@ -182,6 +182,12 @@ namespace FutaZone
                         entity.bones = Calculate.ReadBones(boneMatrix, swed);
                         entity.bones2d = Calculate.ReadBones2D(entity.bones, viewMatrix, screenSize);
                         entity.isLocalPlayer = (currentPawn == localPlayerPawn);
+                        entity.emitSoundTime = swed.ReadFloat(currentPawn, Offsets.m_flEmitSoundTime);
+                        entity.flags = (uint)swed.ReadInt(currentPawn, Offsets.m_fFlags);
+                        entity.controllerAddress = currentController.ToInt64();
+                        Vector3 entVelocity = swed.ReadVec(currentPawn, Offsets.m_vecVelocity);
+                        entity.velocityVec = entVelocity;
+                        entity.velocity = (int)Math.Round(new Vector2(entVelocity.X, entVelocity.Y).Length());
 
                         if (entity.isLocalPlayer)
                         {
