@@ -35,6 +35,7 @@ namespace FutaZone
         private bool enableAutoStop = false;
         private bool enableSoundESP = false;
         public bool enableHitSound = true;
+        private bool enableVisibleCheck = true; // Default to true
         private bool showTeammates = false; // Default to not showing teammates
         private Vector4 enemyColor = new Vector4(1.0f, 0.6f, 0.75f, 1.0f); // Sakura pink for enemy 
 
@@ -244,6 +245,9 @@ namespace FutaZone
                         
                         bool aimAtTeammates = Aimbot.Instance.AimAtTeammates;
                         if (ImGui.Checkbox(isCN ? "Aim at Teammates (瞄准队友)" : "Aim at Teammates", ref aimAtTeammates)) Aimbot.Instance.AimAtTeammates = aimAtTeammates;
+
+                        ImGui.Checkbox(isCN ? "Visible Check (可视检查)" : "Visible Check", ref enableVisibleCheck);
+                        Aimbot.Instance.VisibleCheck = enableVisibleCheck;
 
                         ImGui.Checkbox(isCN ? "Show Aim Target (显示瞄准点)" : "Show Aim Target", ref showAimTarget);
 

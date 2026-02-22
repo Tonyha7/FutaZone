@@ -43,6 +43,7 @@ namespace FutaZone
         public bool Enabled { get; set; } = true;
         public float FOV = 250f;
         public bool AimAtTeammates { get; set; } = false;
+        public bool VisibleCheck { get; set; } = true;
         public int TargetBoneIndex { get; set; } = 2; // Default to Head (index 2 in BoneIds)
         
         // Mode Settings
@@ -100,6 +101,8 @@ namespace FutaZone
                 
                 // Check team
                 if (!AimAtTeammates && e.team == localPlayer.team) continue;
+
+                if (VisibleCheck && !e.isSpotted) continue;
 
                 // THE BONE CALCULATION
                 Vector2 targetBonePos = Vector2.Zero;

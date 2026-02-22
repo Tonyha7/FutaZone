@@ -27,6 +27,7 @@ namespace FutaZone
 
         public string name { get; set; } = string.Empty;
         public bool isLocalPlayer { get; set; }
+        public bool isSpotted { get; set; }
     }
 
     public enum BoneIds

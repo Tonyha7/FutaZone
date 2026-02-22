@@ -217,6 +217,12 @@ namespace FutaZone
                         Vector3 entVelocity = swed.ReadVec(currentPawn, Offsets.m_vecVelocity);
                         entity.velocityVec = entVelocity;
                         entity.velocity = (int)Math.Round(new Vector2(entVelocity.X, entVelocity.Y).Length());
+                        
+                        // Check if spotted
+                        // Correctly check the m_bSpotted boolean within m_entitySpottedState
+                        // We read 1 byte (bool) at the correct offset
+                        byte[] spottedBytes = swed.ReadBytes(currentPawn + Offsets.m_entitySpottedState + Offsets.m_bSpotted, 1);
+                        entity.isSpotted = spottedBytes[0] != 0;
 
                         if (entity.isLocalPlayer)
                         {
