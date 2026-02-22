@@ -33,6 +33,8 @@ namespace FutaZone
         public static int m_iPing;
         public static int m_vecVelocity;
         public static int m_flEmitSoundTime;
+        public static int m_pBulletServices;
+        public static int m_totalHitsOnServer;
         // Bomb Timer related fields
         public static int m_flDefuseCountDown;
         public static int m_flC4Blow;
@@ -88,6 +90,8 @@ namespace FutaZone
                 m_iPing = GetFieldOffset("CCSPlayerController", "m_iPing");
                 m_vecVelocity = GetFieldOffset("C_BaseEntity", "m_vecVelocity");
                 m_flEmitSoundTime = GetFieldOffset("C_CSPlayerPawn", "m_flEmitSoundTime");
+                m_pBulletServices = GetFieldOffset("C_CSPlayerPawn", "m_pBulletServices");
+                m_totalHitsOnServer = GetFieldOffset("CCSPlayer_BulletServices", "m_totalHitsOnServer");
                 
                 // C_PlantedC4 fields
                 m_flDefuseCountDown = GetFieldOffset("C_PlantedC4", "m_flDefuseCountDown");

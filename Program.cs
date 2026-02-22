@@ -105,6 +105,9 @@ namespace FutaZone
 
                 Console.WriteLine($"Target FPS set to screen refresh rate: {targetFps}");
 
+                int previousTotalHits = 0;
+                bool isHitsInitialized = false;
+
                 while (true)
                 {
                     if (cs2Process.HasExited)
@@ -130,6 +133,32 @@ namespace FutaZone
                     
                     Vector3 viewAngles = swed.ReadVec(client, Offsets.dwViewAngles);
                     localPlayer.viewAngles = new Vector2(viewAngles.X, viewAngles.Y);
+
+                    // Hit Sound Logic
+                    if (localPlayerPawn != IntPtr.Zero)
+                    {
+                        IntPtr bulletServices = swed.ReadPointer(localPlayerPawn, Offsets.m_pBulletServices);
+                        if (bulletServices != IntPtr.Zero)
+                        {
+                            int currentTotalHits = swed.ReadInt(bulletServices, Offsets.m_totalHitsOnServer);
+                            
+                            if (!isHitsInitialized)
+                            {
+                                previousTotalHits = currentTotalHits;
+                                isHitsInitialized = true;
+                            }
+                            else if (currentTotalHits != previousTotalHits)
+                            {
+                                if (currentTotalHits > previousTotalHits && renderer.enableHitSound)
+                                {
+                                    // Play sound asynchronously to avoid main thread blocking
+                                    Task.Run(() => Console.Beep());
+                                }
+                                previousTotalHits = currentTotalHits;
+                            }
+                            // If user toggles sound, be sure to update previous value always to avoid queued beeps
+                        }
+                    }
 
                     // Update local player name and ping
                     IntPtr localPlayerController = swed.ReadPointer(client, Offsets.dwEntityList); // We need to find local player controller, but typically it is at a known index or we iterate like below.

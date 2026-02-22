@@ -34,6 +34,7 @@ namespace FutaZone
         private bool enableTriggerBot = false;
         private bool enableAutoStop = false;
         private bool enableSoundESP = false;
+        public bool enableHitSound = true;
         private bool showTeammates = false; // Default to not showing teammates
         private Vector4 enemyColor = new Vector4(1.0f, 0.6f, 0.75f, 1.0f); // Sakura pink for enemy 
 
@@ -303,6 +304,7 @@ namespace FutaZone
                     }
                 }
                 
+                ImGui.Checkbox("Enable HitSound (击中提示音)", ref enableHitSound);
                 ImGui.Checkbox("Enable Bomb Timer (C4计时器)", ref enableBombTimer);
                 ImGui.Checkbox("Enable Watermark (水印)", ref enableWatermark);
                 if (ImGui.Checkbox("Enable VSync (垂直同步)", ref vsync)) VSync = vsync;
