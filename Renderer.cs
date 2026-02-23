@@ -72,6 +72,13 @@ namespace FutaZone
         private int watermarkVelocity = 0;
         private float lastWatermarkUpdate = 0f;
 
+        // Config System UI variables
+        private string newConfigName = "config";
+        private int selectedConfigIndex = 0;
+        private bool showSaveConfirm = false;
+        private string statusMessage = "";
+        private float statusMessageTime = 0f;
+
         private void InitializeStyle()
         {
             ImGuiStylePtr style = ImGui.GetStyle();
@@ -145,6 +152,9 @@ namespace FutaZone
 
             // Initial font load if Chinese
             LoadFontForLanguage(currentLanguage);
+
+            // Initialize Config System
+            ConfigSystem.Initialize();
         }
 
         protected override void Render()
@@ -388,7 +398,79 @@ namespace FutaZone
                         if (ImGui.SliderFloat(isCN ? "Stop Speed (停止速度)" : "Stop Speed", ref stop, 0f, 100f)) AutoStop.Instance.StopThreshold = stop;
                     }
                 }
-                
+                ImGui.Separator();
+                if (ImGui.CollapsingHeader(isCN ? "Configuration (配置)" : "Configuration", ImGuiTreeNodeFlags.DefaultOpen))
+                {
+                    // Update available configs
+                    var configs = ConfigSystem.AvailableConfigs.ToArray();
+                    
+                    // Create new config input
+                    ImGui.InputText(isCN ? "New Name (新配置名)" : "New Name", ref newConfigName, 32);
+                    ImGui.SameLine();
+                    
+                    if (ImGui.Button(isCN ? "Save New (保存新配置)" : "Save New"))
+                    {
+                        if (!string.IsNullOrWhiteSpace(newConfigName))
+                        {
+                            SaveConfigFromUI(newConfigName);
+                            statusMessage = isCN ? $"Saved {newConfigName}!" : $"Saved {newConfigName}!";
+                            statusMessageTime = (float)ImGui.GetTime();
+                            ConfigSystem.RefreshConfigs(); // Refresh list to include new file
+                        }
+                    }
+
+                    if (configs.Length > 0)
+                    {
+                        if (selectedConfigIndex >= configs.Length) selectedConfigIndex = 0;
+                        if (ImGui.Combo(isCN ? "Select Config (选择配置)" : "Select Config", ref selectedConfigIndex, configs, configs.Length))
+                        {
+                            // Optional: Auto-load on select? Or just wait for button. Let's wait for button.
+                            newConfigName = configs[selectedConfigIndex]; // Update name field for easy overwriting
+                        }
+                        
+                        if (ImGui.Button(isCN ? "Load (加载)" : "Load"))
+                        {
+                             LoadConfigToUI(configs[selectedConfigIndex]);
+                             statusMessage = isCN ? "Loaded!" : "Loaded!";
+                             statusMessageTime = (float)ImGui.GetTime();
+                        }
+                        
+                        ImGui.SameLine();
+                        if (ImGui.Button(isCN ? "Save (保存)" : "Save"))
+                        {
+                            showSaveConfirm = true;
+                        }
+
+                        if (showSaveConfirm)
+                        {
+                            ImGui.SameLine();
+                            ImGui.TextColored(new Vector4(1.0f, 0.0f, 0.0f, 1.0f), isCN ? "Confirm? (确定?)" : "Confirm?");
+                            ImGui.SameLine();
+                            if (ImGui.Button(isCN ? "Yes (是)" : "Yes"))
+                            {
+                                SaveConfigFromUI(configs[selectedConfigIndex]);
+                                statusMessage = isCN ? "Saved!" : "Saved!";
+                                statusMessageTime = (float)ImGui.GetTime();
+                                showSaveConfirm = false;
+                            }
+                            ImGui.SameLine();
+                            if (ImGui.Button(isCN ? "No (否)" : "No"))
+                            {
+                                showSaveConfirm = false;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        ImGui.TextDisabled(isCN ? "No configs found (未找到配置)" : "No configs found");
+                    }
+
+                    // Status Message
+                    if ((float)ImGui.GetTime() - statusMessageTime < 3.0f)
+                    {
+                        ImGui.TextColored(new Vector4(0.0f, 1.0f, 0.0f, 1.0f), statusMessage);
+                    }
+                }
                 ImGui.Checkbox(isCN ? "Enable HitSound (击中提示音)" : "Enable HitSound", ref enableHitSound);
                 ImGui.Checkbox(isCN ? "Enable Bomb Timer (C4计时器)" : "Enable Bomb Timer", ref enableBombTimer);
                 ImGui.Checkbox(isCN ? "Enable Watermark (水印)" : "Enable Watermark", ref enableWatermark);
@@ -797,6 +879,7 @@ namespace FutaZone
             // Background
             drawList.AddRectFilled(barTop, barBottom, ImGui.ColorConvertFloat4ToU32(new Vector4(0, 0, 0, 0.5f)));
 
+
             // Filled portion (fill from bottom up)
             float totalHeight = MathF.Max(1.0f, barBottom.Y - barTop.Y);
             float filledHeight = totalHeight * Math.Clamp(healthPercent, 0f, 1f);
@@ -867,6 +950,125 @@ namespace FutaZone
             ImGui.SetNextWindowSize(screenSize);
             ImGui.SetNextWindowPos(new Vector2(0, 0));
             ImGui.Begin("FUTAZONE-OVERLAY", ImGuiWindowFlags.NoDecoration | ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoBringToFrontOnFocus | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoInputs | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse);
+        }
+
+
+        private void LoadConfigToUI(string configName)
+        {
+            Config cfg = ConfigSystem.LoadConfig(configName);
+            if (cfg == null) return;
+
+            // ESP
+            enableESP = cfg.EnableESP;
+            enableLines = cfg.EnableLines;
+            espStyle = (EspStyle)cfg.EspStyle;
+            espMode = (EspMode)cfg.EspMode;
+            showTeammates = cfg.ShowTeammates;
+            teamColor = ConfigSystem.ToVector4(cfg.TeamColor);
+            enemyColor = ConfigSystem.ToVector4(cfg.EnemyColor);
+            bonesColor = ConfigSystem.ToVector4(cfg.BonesColor);
+            
+            // SoundESP
+            enableSoundESP = cfg.EnableSoundESP;
+            soundEspStyle = (SoundEspStyle)cfg.SoundEspStyle;
+            SoundESP.Style = cfg.SoundEspStyle;
+            soundESPColor = ConfigSystem.ToVector4(cfg.SoundEspColor);
+
+            // Misc
+            enableBombTimer = cfg.EnableBombTimer;
+            enableWatermark = cfg.EnableWatermark;
+            enableHitSound = cfg.EnableHitSound;
+            
+            // Aimbot
+            enableAimbot = cfg.EnableAimbot;
+            Aimbot.Instance.Enabled = cfg.EnableAimbot;
+            Aimbot.Instance.FOV = cfg.AimbotFOV;
+            Aimbot.Instance.Smoothness = cfg.AimbotSmoothness;
+            Aimbot.Instance.AimAtTeammates = cfg.AimAtTeammates;
+            
+            enableVisibleCheck = cfg.AimbotVisibleCheck;
+            Aimbot.Instance.VisibleCheck = cfg.AimbotVisibleCheck;
+            
+            Aimbot.Instance.DisableWhenFlashed = cfg.DisableWhenFlashed;
+            Aimbot.Instance.FlashDurationThreshold = cfg.FlashDurationThreshold;
+            
+            showAimTarget = cfg.ShowAimTarget;
+            Aimbot.Instance.Mode = (Aimbot.AimMode)cfg.AimMode;
+            Aimbot.Instance.RandomizeSpeed = cfg.RandomizeSpeed;
+            Aimbot.Instance.SpeedChangeDuration = cfg.SpeedChangeDuration;
+            Aimbot.Instance.OvershootScale = cfg.OvershootScale;
+            Aimbot.Instance.AimKey = cfg.AimKey;
+            Aimbot.Instance.TargetBoneIndex = cfg.TargetBoneIndex;
+            
+            // TriggerBot
+            enableTriggerBot = cfg.EnableTriggerBot;
+            TriggerBot.Instance.Enabled = cfg.EnableTriggerBot;
+            TriggerBot.Instance.DelayMs = cfg.TriggerDelayMs;
+            TriggerBot.Instance.MaxVelocityThreshold = cfg.TriggerMaxVelocity;
+            TriggerBot.Instance.TriggerOnTeammates = cfg.TriggerOnTeammates;
+            TriggerBot.Instance.TriggerKey = cfg.TriggerKey;
+
+            // AutoStop
+            enableAutoStop = cfg.EnableAutoStop;
+            AutoStop.Instance.Enabled = cfg.EnableAutoStop;
+            AutoStop.Instance.TriggerThreshold = cfg.AutoStopTriggerThreshold;
+            AutoStop.Instance.StopThreshold = cfg.AutoStopStopThreshold;
+        }
+
+        private void SaveConfigFromUI(string configName)
+        {
+            Config cfg = new Config();
+            cfg.Name = configName;
+
+            // ESP
+            cfg.EnableESP = enableESP;
+            cfg.EnableLines = enableLines;
+            cfg.EspStyle = (int)espStyle;
+            cfg.EspMode = (int)espMode;
+            cfg.ShowTeammates = showTeammates;
+            cfg.TeamColor = ConfigSystem.ToFloatArray(teamColor);
+            cfg.EnemyColor = ConfigSystem.ToFloatArray(enemyColor);
+            cfg.BonesColor = ConfigSystem.ToFloatArray(bonesColor);
+            
+            // SoundESP
+            cfg.EnableSoundESP = enableSoundESP;
+            cfg.SoundEspStyle = (int)soundEspStyle;
+            cfg.SoundEspColor = ConfigSystem.ToFloatArray(soundESPColor);
+
+            // Misc
+            cfg.EnableBombTimer = enableBombTimer;
+            cfg.EnableWatermark = enableWatermark;
+            cfg.EnableHitSound = enableHitSound;
+            
+            // Aimbot
+            cfg.EnableAimbot = enableAimbot;
+            cfg.AimbotFOV = Aimbot.Instance.FOV;
+            cfg.AimbotSmoothness = Aimbot.Instance.Smoothness;
+            cfg.AimAtTeammates = Aimbot.Instance.AimAtTeammates;
+            cfg.AimbotVisibleCheck = enableVisibleCheck;
+            cfg.DisableWhenFlashed = Aimbot.Instance.DisableWhenFlashed;
+            cfg.FlashDurationThreshold = Aimbot.Instance.FlashDurationThreshold;
+            cfg.ShowAimTarget = showAimTarget;
+            cfg.AimMode = (int)Aimbot.Instance.Mode;
+            cfg.RandomizeSpeed = Aimbot.Instance.RandomizeSpeed;
+            cfg.SpeedChangeDuration = Aimbot.Instance.SpeedChangeDuration;
+            cfg.OvershootScale = Aimbot.Instance.OvershootScale;
+            cfg.AimKey = Aimbot.Instance.AimKey;
+            cfg.TargetBoneIndex = Aimbot.Instance.TargetBoneIndex;
+            
+            // TriggerBot
+            cfg.EnableTriggerBot = enableTriggerBot;
+            cfg.TriggerDelayMs = TriggerBot.Instance.DelayMs;
+            cfg.TriggerMaxVelocity = TriggerBot.Instance.MaxVelocityThreshold;
+            cfg.TriggerOnTeammates = TriggerBot.Instance.TriggerOnTeammates;
+            cfg.TriggerKey = TriggerBot.Instance.TriggerKey;
+
+            // AutoStop
+            cfg.EnableAutoStop = enableAutoStop;
+            cfg.AutoStopTriggerThreshold = AutoStop.Instance.TriggerThreshold;
+            cfg.AutoStopStopThreshold = AutoStop.Instance.StopThreshold;
+
+            ConfigSystem.SaveConfig(cfg, configName);
         }
     }
 }
