@@ -35,6 +35,9 @@ namespace FutaZone
         private bool enableAutoStop = false;
         private bool enableSoundESP = false;
         public bool enableHitSound = true;
+        public string hitSoundFile = "Default";
+        private string[] hitSoundFiles = new string[] { "Default" };
+        private int selectedHitSoundIndex = 0;
         private bool enableVisibleCheck = true; // Default to true
         private bool showTeammates = false; // Default to not showing teammates
         private Vector4 enemyColor = new Vector4(1.0f, 0.6f, 0.75f, 1.0f); // Sakura pink for enemy 
@@ -76,8 +79,44 @@ namespace FutaZone
         private string newConfigName = "config";
         private int selectedConfigIndex = 0;
         private bool showSaveConfirm = false;
+        private float saveConfirmTime = 0f;
         private string statusMessage = "";
         private float statusMessageTime = 0f;
+
+        private void RefreshHitSounds()
+        {
+            try
+            {
+                string hitSoundPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "FUTAZONE");
+                if (!Directory.Exists(hitSoundPath))
+                {
+                    Directory.CreateDirectory(hitSoundPath);
+                }
+
+                var files = Directory.GetFiles(hitSoundPath, "*.wav");
+                List<string> list = new List<string> { "Default" };
+                foreach (var file in files)
+                {
+                    list.Add(Path.GetFileName(file));
+                }
+                hitSoundFiles = list.ToArray();
+                
+                // Restore selection
+                selectedHitSoundIndex = 0;
+                if (!string.IsNullOrEmpty(hitSoundFile))
+                {
+                    for (int i = 0; i < hitSoundFiles.Length; i++)
+                    {
+                        if (hitSoundFiles[i] == hitSoundFile)
+                        {
+                            selectedHitSoundIndex = i;
+                            break;
+                        }
+                    }
+                }
+            }
+            catch {}
+        }
 
         private void InitializeStyle()
         {
@@ -155,6 +194,9 @@ namespace FutaZone
 
             // Initialize Config System
             ConfigSystem.Initialize();
+            
+            // Populate hit sounds
+            RefreshHitSounds();
         }
 
         protected override void Render()
@@ -427,7 +469,7 @@ namespace FutaZone
                             // Optional: Auto-load on select? Or just wait for button. Let's wait for button.
                             newConfigName = configs[selectedConfigIndex]; // Update name field for easy overwriting
                         }
-                        
+                        ImGui.SameLine();
                         if (ImGui.Button(isCN ? "Load (加载)" : "Load"))
                         {
                              LoadConfigToUI(configs[selectedConfigIndex]);
@@ -436,28 +478,33 @@ namespace FutaZone
                         }
                         
                         ImGui.SameLine();
-                        if (ImGui.Button(isCN ? "Save (保存)" : "Save"))
+                        
+                        // Check for timeout
+                        if (showSaveConfirm && (float)ImGui.GetTime() - saveConfirmTime > 3.0f)
                         {
-                            showSaveConfirm = true;
+                            showSaveConfirm = false;
                         }
 
                         if (showSaveConfirm)
                         {
-                            ImGui.SameLine();
-                            ImGui.TextColored(new Vector4(1.0f, 0.0f, 0.0f, 1.0f), isCN ? "Confirm? (确定?)" : "Confirm?");
-                            ImGui.SameLine();
-                            if (ImGui.Button(isCN ? "Yes (是)" : "Yes"))
-                            {
-                                SaveConfigFromUI(configs[selectedConfigIndex]);
-                                statusMessage = isCN ? "Saved!" : "Saved!";
-                                statusMessageTime = (float)ImGui.GetTime();
-                                showSaveConfirm = false;
-                            }
-                            ImGui.SameLine();
-                            if (ImGui.Button(isCN ? "No (否)" : "No"))
-                            {
-                                showSaveConfirm = false;
-                            }
+                             ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.8f, 0.0f, 0.0f, 1.0f));
+                             ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(1.0f, 0.0f, 0.0f, 1.0f));
+                             if (ImGui.Button(isCN ? "Confirm? (点击确认)" : "Confirm?"))
+                             {
+                                 SaveConfigFromUI(configs[selectedConfigIndex]);
+                                 statusMessage = isCN ? "Saved!" : "Saved!";
+                                 statusMessageTime = (float)ImGui.GetTime();
+                                 showSaveConfirm = false;
+                             }
+                             ImGui.PopStyleColor(2);
+                        }
+                        else
+                        {
+                             if (ImGui.Button(isCN ? "Save (保存)" : "Save"))
+                             {
+                                 showSaveConfirm = true;
+                                 saveConfirmTime = (float)ImGui.GetTime();
+                             }
                         }
                     }
                     else
@@ -472,6 +519,26 @@ namespace FutaZone
                     }
                 }
                 ImGui.Checkbox(isCN ? "Enable HitSound (击中提示音)" : "Enable HitSound", ref enableHitSound);
+                
+                if (enableHitSound)
+                {
+                    ImGui.SameLine();
+                    ImGui.PushItemWidth(150);
+                    if (ImGui.Combo("##HitSoundSelect", ref selectedHitSoundIndex, hitSoundFiles, hitSoundFiles.Length))
+                    {
+                        if (selectedHitSoundIndex >= 0 && selectedHitSoundIndex < hitSoundFiles.Length)
+                        {
+                            hitSoundFile = hitSoundFiles[selectedHitSoundIndex];
+                        }
+                    }
+                    ImGui.PopItemWidth();
+                    ImGui.SameLine();
+                    if (ImGui.Button(isCN ? "Refresh##HitSound" : "Refresh##HitSound"))
+                    {
+                        RefreshHitSounds();
+                    }
+                }
+                
                 ImGui.Checkbox(isCN ? "Enable Bomb Timer (C4计时器)" : "Enable Bomb Timer", ref enableBombTimer);
                 ImGui.Checkbox(isCN ? "Enable Watermark (水印)" : "Enable Watermark", ref enableWatermark);
                 if (ImGui.Checkbox(isCN ? "Enable VSync (垂直同步)" : "Enable VSync", ref vsync)) VSync = vsync;
@@ -978,6 +1045,9 @@ namespace FutaZone
             enableBombTimer = cfg.EnableBombTimer;
             enableWatermark = cfg.EnableWatermark;
             enableHitSound = cfg.EnableHitSound;
+            hitSoundFile = cfg.HitSoundFile;
+            if (string.IsNullOrEmpty(hitSoundFile)) hitSoundFile = "Default";
+            RefreshHitSounds();
             
             // Aimbot
             enableAimbot = cfg.EnableAimbot;
@@ -1039,6 +1109,7 @@ namespace FutaZone
             cfg.EnableBombTimer = enableBombTimer;
             cfg.EnableWatermark = enableWatermark;
             cfg.EnableHitSound = enableHitSound;
+            cfg.HitSoundFile = hitSoundFile;
             
             // Aimbot
             cfg.EnableAimbot = enableAimbot;

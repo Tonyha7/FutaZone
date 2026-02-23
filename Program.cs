@@ -5,6 +5,8 @@ using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Media;
+using System.IO;
 using Swed64;
 
 namespace FutaZone
@@ -152,8 +154,38 @@ namespace FutaZone
                             {
                                 if (currentTotalHits > previousTotalHits && renderer.enableHitSound)
                                 {
+                                    string selectedSound = renderer.hitSoundFile;
+                                    
                                     // Play sound asynchronously to avoid main thread blocking
-                                    Task.Run(() => Console.Beep());
+                                    
+                                    Task.Run(() => 
+                                    {
+                                        bool played = false;
+                                        if (!string.IsNullOrEmpty(selectedSound) && selectedSound != "Default")
+                                        {
+                                            string basePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "FUTAZONE");
+                                            string path = Path.Combine(basePath, selectedSound);
+                                            
+                                            // Check if file exists, if not, allow fallback
+                                            if (File.Exists(path))
+                                            {
+                                                try
+                                                {
+                                                    using (SoundPlayer player = new SoundPlayer(path))
+                                                    {
+                                                        player.Play();
+                                                        played = true;
+                                                    }
+                                                }
+                                                catch {}
+                                            }
+                                        }
+                                        
+                                        if (!played)
+                                        {
+                                            Console.Beep();
+                                        }
+                                    });
                                 }
                                 previousTotalHits = currentTotalHits;
                             }
