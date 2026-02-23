@@ -50,6 +50,8 @@ namespace FutaZone
         public int TriggerKey { get; set; } = 0x12; // Default to ALT
         public int DelayMs { get; set; } = 15;
         public bool TriggerOnTeammates { get; set; } = false;
+        public bool DisableWhenFlashed { get; set; } = false;
+        public float FlashDurationThreshold { get; set; } = 5.0f;
         public float MaxVelocityThreshold { get; set; } = 18f;
 
         private Stopwatch timer = new Stopwatch();
@@ -65,6 +67,8 @@ namespace FutaZone
             {
                 return;
             }
+
+            if (DisableWhenFlashed && localPlayer.flashDuration > FlashDurationThreshold) return;
 
             if (timer.ElapsedMilliseconds < DelayMs) return;
 

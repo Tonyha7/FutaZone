@@ -44,6 +44,8 @@ namespace FutaZone
         public float FOV = 250f;
         public bool AimAtTeammates { get; set; } = false;
         public bool VisibleCheck { get; set; } = true;
+        public bool DisableWhenFlashed { get; set; } = false;
+        public float FlashDurationThreshold { get; set; } = 5.0f;
         public int TargetBoneIndex { get; set; } = 2; // Default to Head (index 2 in BoneIds)
         
         // Mode Settings
@@ -76,6 +78,15 @@ namespace FutaZone
             timer.Restart();
 
             if (!Enabled)
+            {
+                _errorX = 0;
+                _errorY = 0;
+                _lastTarget = null;
+                TargetPosition = null;
+                return;
+            }
+
+            if (DisableWhenFlashed && localPlayer.flashDuration > FlashDurationThreshold)
             {
                 _errorX = 0;
                 _errorY = 0;

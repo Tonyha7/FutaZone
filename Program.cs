@@ -130,6 +130,7 @@ namespace FutaZone
                     Vector3 velocity = swed.ReadVec(localPlayerPawn, Offsets.m_vecVelocity);
                     localPlayer.velocityVec = velocity;
                     localPlayer.velocity = (int)Math.Round(new Vector2(velocity.X, velocity.Y).Length());
+                    localPlayer.flashDuration = swed.ReadFloat(localPlayerPawn, Offsets.m_flFlashDuration);
                     
                     Vector3 viewAngles = swed.ReadVec(client, Offsets.dwViewAngles);
                     localPlayer.viewAngles = new Vector2(viewAngles.X, viewAngles.Y);

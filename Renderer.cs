@@ -266,6 +266,15 @@ namespace FutaZone
                         ImGui.Checkbox(isCN ? "Visible Check (可视检查)" : "Visible Check", ref enableVisibleCheck);
                         Aimbot.Instance.VisibleCheck = enableVisibleCheck;
 
+                        bool disableWhenFlashed = Aimbot.Instance.DisableWhenFlashed;
+                        if (ImGui.Checkbox(isCN ? "Disable When Flashed (被闪时关闭)" : "Disable When Flashed", ref disableWhenFlashed)) Aimbot.Instance.DisableWhenFlashed = disableWhenFlashed;
+
+                        if (disableWhenFlashed)
+                        {
+                            float flashThreshold = Aimbot.Instance.FlashDurationThreshold;
+                            if (ImGui.SliderFloat(isCN ? "Flash Threshold (闪白阈值)" : "Flash Threshold", ref flashThreshold, 0.0f, 5.0f)) Aimbot.Instance.FlashDurationThreshold = flashThreshold;
+                        }
+
                         ImGui.Checkbox(isCN ? "Show Aim Target (显示瞄准点)" : "Show Aim Target", ref showAimTarget);
 
                         // Aim Mode Selection
@@ -344,6 +353,15 @@ namespace FutaZone
 
                         bool triggerOnTeammates = TriggerBot.Instance.TriggerOnTeammates;
                         if (ImGui.Checkbox(isCN ? "Trigger on Teammates (对队友开火)" : "Trigger on Teammates", ref triggerOnTeammates)) TriggerBot.Instance.TriggerOnTeammates = triggerOnTeammates;
+
+                        bool disableWhenFlashed = TriggerBot.Instance.DisableWhenFlashed;
+                        if (ImGui.Checkbox(isCN ? "Disable When Flashed (被闪时关闭)" : "Disable When Flashed", ref disableWhenFlashed)) TriggerBot.Instance.DisableWhenFlashed = disableWhenFlashed;
+
+                        if (disableWhenFlashed)
+                        {
+                            float flashThreshold = TriggerBot.Instance.FlashDurationThreshold;
+                            if (ImGui.SliderFloat(isCN ? "Flash Threshold (闪白阈值)" : "Flash Threshold", ref flashThreshold, 0.0f, 5.0f)) TriggerBot.Instance.FlashDurationThreshold = flashThreshold;
+                        }
 
                         // Keybind selection
                         int currentKey = TriggerBot.Instance.TriggerKey;
