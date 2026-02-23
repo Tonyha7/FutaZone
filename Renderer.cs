@@ -55,6 +55,9 @@ namespace FutaZone
         private enum EspStyle { FullBox = 0, CornerBox = 1, NoBox = 2, Circle3D = 3, Star3D = 4 }
         private EspStyle espStyle = EspStyle.FullBox;
 
+        private enum SoundEspStyle { ExpandingCircle = 0, ConnectedCircles = 1, Arrows = 2 }
+        private SoundEspStyle soundEspStyle = SoundEspStyle.ExpandingCircle;
+
         //draw list
         ImDrawListPtr drawList;
 
@@ -188,6 +191,7 @@ namespace FutaZone
                     {
                         if (enableESP)
                         {
+                            ImGui.Checkbox(isCN ? "Enable Lines (开启射线)" : "Enable Snaplines", ref enableLines);
                             // ESP Style Selection
                             string[] styleNames = isCN 
                                 ? new[] { "Full Box (全框)", "Corner Box (四角)", "No Box (无框)", "3D Circle (立体圆环)", "3D Star (立体五角星)" }
@@ -198,10 +202,22 @@ namespace FutaZone
                             {
                                 espStyle = (EspStyle)styleIndex;
                             }
-
-                            ImGui.Checkbox(isCN ? "Enable Lines (开启射线)" : "Enable Snaplines", ref enableLines);
                         }
                         
+                                                
+                        if (enableSoundESP)
+                        {
+                            string[] soundStyleNames = isCN 
+                                ? new[] { "Expanding Circle (扩散圆圈)", "Connected Circles (连接圆圈)", "Arrows (箭头连接)" }
+                                : new[] { "Expanding Circle", "Connected Circles", "Arrows" };
+                                
+                            int soundStyleIndex = (int)soundEspStyle;
+                            if (ImGui.Combo(isCN ? "SoundESP Style (声音透视样式)" : "SoundESP Style", ref soundStyleIndex, soundStyleNames, soundStyleNames.Length))
+                            {
+                                soundEspStyle = (SoundEspStyle)soundStyleIndex;
+                                SoundESP.Style = soundStyleIndex;
+                            }
+                        }
                         ImGui.Checkbox(isCN ? "Show Teammates (显示队友)" : "Show Teammates", ref showTeammates);
                         
                         // ESP settings shown when feature expanded
@@ -221,11 +237,12 @@ namespace FutaZone
                             ImGui.ColorEdit4(isCN ? "Enemy Color (敌人颜色)" : "Enemy Color", ref enemyColor);
                             ImGui.ColorEdit4(isCN ? "Bones Color (骨骼颜色)" : "Bone Color", ref bonesColor);
                         }
-                        
+
                         if (enableSoundESP)
                         {
                             ImGui.ColorEdit4(isCN ? "SoundESP Color (声音透视颜色)" : "SoundESP Color", ref soundESPColor);
                         }
+
                     }
                 }
 
