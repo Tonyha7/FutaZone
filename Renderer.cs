@@ -354,15 +354,6 @@ namespace FutaZone
                         bool triggerOnTeammates = TriggerBot.Instance.TriggerOnTeammates;
                         if (ImGui.Checkbox(isCN ? "Trigger on Teammates (对队友开火)" : "Trigger on Teammates", ref triggerOnTeammates)) TriggerBot.Instance.TriggerOnTeammates = triggerOnTeammates;
 
-                        bool disableWhenFlashed = TriggerBot.Instance.DisableWhenFlashed;
-                        if (ImGui.Checkbox(isCN ? "Disable When Flashed (被闪时关闭)" : "Disable When Flashed", ref disableWhenFlashed)) TriggerBot.Instance.DisableWhenFlashed = disableWhenFlashed;
-
-                        if (disableWhenFlashed)
-                        {
-                            float flashThreshold = TriggerBot.Instance.FlashDurationThreshold;
-                            if (ImGui.SliderFloat(isCN ? "Flash Threshold (闪白阈值)" : "Flash Threshold", ref flashThreshold, 0.0f, 5.0f)) TriggerBot.Instance.FlashDurationThreshold = flashThreshold;
-                        }
-
                         // Keybind selection
                         int currentKey = TriggerBot.Instance.TriggerKey;
                         string[] keyNames = isCN 
