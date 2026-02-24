@@ -27,6 +27,7 @@ namespace FutaZone
         //GUI elements
         private bool enableESP = true;
         private bool enableLines = false;
+        private bool enablePlayerState = false;
         private bool enableBombTimer = true;
         private bool enableWatermark = true;
         private bool enableAimbot = false;
@@ -245,6 +246,7 @@ namespace FutaZone
                         if (enableESP)
                         {
                             ImGui.Checkbox(isCN ? "Enable Lines (开启射线)" : "Enable Snaplines", ref enableLines);
+                            ImGui.Checkbox(isCN ? "Enable Player State (开启玩家状态)" : "Enable Player State", ref enablePlayerState);
                             // ESP Style Selection
                             string[] styleNames = isCN 
                                 ? new[] { "Full Box (全框)", "Corner Box (四角)", "No Box (无框)", "3D Circle (立体圆环)", "3D Star (立体五角星)" }
@@ -613,6 +615,7 @@ namespace FutaZone
 
                                 DrawHealthBar(entity);
                                 DrawBox(entity);
+                                if (enablePlayerState) DrawPlayerState(entity);
                                 DrawBones(entity);
                             }
                         }
@@ -962,6 +965,53 @@ namespace FutaZone
             drawList.AddRectFilled(new Vector2(barX1, filledTopY), barBottom, ImGui.ColorConvertFloat4ToU32(healthColor));
         }
 
+        private void DrawPlayerState(Entity entity)
+        {
+            float entityHeight = entity.position2D.Y - entity.viewPosition2D.Y;
+            float boxRightX = entity.position2D.X + entityHeight / 3f;
+            
+            float textX = boxRightX + 4.0f;
+            float textY = entity.viewPosition2D.Y;
+
+            Vector4 stateColor;
+            if (espMode == EspMode.Ffa)
+                stateColor = enemyColor;
+            else
+                stateColor = localPlayer.team == entity.team ? teamColor : enemyColor;
+
+            uint col = ImGui.ColorConvertFloat4ToU32(stateColor);
+            
+            ImFontPtr font = ImGui.GetFont();
+            float fontSize = ImGui.GetFontSize() * 0.8f;
+            float yOffset = fontSize + 2.0f;
+
+            if (entity.isBuyMenuOpen)
+            {
+                drawList.AddText(font, fontSize, new Vector2(textX, textY), col, "Buying");
+                textY += yOffset;
+            }
+            if (entity.isScoped)
+            {
+                drawList.AddText(font, fontSize, new Vector2(textX, textY), col, "Scoped");
+                textY += yOffset;
+            }
+            if (entity.isDefusing)
+            {
+                drawList.AddText(font, fontSize, new Vector2(textX, textY), col, "Defusing");
+                textY += yOffset;
+            }
+            if (entity.isGrabbingHostage)
+            {
+                drawList.AddText(font, fontSize, new Vector2(textX, textY), col, "Hostage");
+                textY += yOffset;
+            }
+            if (entity.hasDefuser)
+            {
+                drawList.AddText(font, fontSize, new Vector2(textX, textY), col, "Defuser");
+                textY += yOffset;
+            }
+        }
+
         public void DrawBones(Entity entity)
         {
             if (entity.bones2d == null || entity.bones2d.Count < 13) return;
@@ -1031,6 +1081,7 @@ namespace FutaZone
             // ESP
             enableESP = cfg.EnableESP;
             enableLines = cfg.EnableLines;
+            enablePlayerState = cfg.EnablePlayerState;
             espStyle = (EspStyle)cfg.EspStyle;
             espMode = (EspMode)cfg.EspMode;
             showTeammates = cfg.ShowTeammates;
@@ -1102,6 +1153,7 @@ namespace FutaZone
             // ESP
             cfg.EnableESP = enableESP;
             cfg.EnableLines = enableLines;
+            cfg.EnablePlayerState = enablePlayerState;
             cfg.EspStyle = (int)espStyle;
             cfg.EspMode = (int)espMode;
             cfg.ShowTeammates = showTeammates;

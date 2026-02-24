@@ -257,6 +257,13 @@ namespace FutaZone
                         byte[] spottedBytes = swed.ReadBytes(currentPawn + Offsets.m_entitySpottedState + Offsets.m_bSpotted, 1);
                         entity.isSpotted = spottedBytes[0] != 0;
 
+                        // Read Player State
+                        entity.isBuyMenuOpen = swed.ReadBytes(currentPawn + Offsets.m_bIsBuyMenuOpen, 1)[0] != 0;
+                        entity.isScoped = swed.ReadBytes(currentPawn + Offsets.m_bIsScoped, 1)[0] != 0;
+                        entity.isDefusing = swed.ReadBytes(currentPawn + Offsets.m_bIsDefusing, 1)[0] != 0;
+                        entity.isGrabbingHostage = swed.ReadBytes(currentPawn + Offsets.m_bIsGrabbingHostage, 1)[0] != 0;
+                        entity.hasDefuser = swed.ReadBytes(currentController + Offsets.m_bPawnHasDefuser, 1)[0] != 0;
+
                         if (entity.isLocalPlayer)
                         {
                             localPlayer.name = entity.name;

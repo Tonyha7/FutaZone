@@ -15,6 +15,7 @@ namespace FutaZone
         // ESP
         public bool EnableESP { get; set; } = true;
         public bool EnableLines { get; set; }
+        public bool EnablePlayerState { get; set; }
         public int EspStyle { get; set; }
         public int EspMode { get; set; }
         public bool ShowTeammates { get; set; }

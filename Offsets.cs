@@ -38,6 +38,12 @@ namespace FutaZone
         public static int m_entitySpottedState;
         public static int m_bSpotted;
         public static int m_flFlashDuration;
+        // Player State fields
+        public static int m_bIsBuyMenuOpen;
+        public static int m_bIsScoped;
+        public static int m_bIsDefusing;
+        public static int m_bIsGrabbingHostage;
+        public static int m_bPawnHasDefuser;
         // Bomb Timer related fields
         public static int m_flDefuseCountDown;
         public static int m_flC4Blow;
@@ -123,6 +129,13 @@ namespace FutaZone
                 m_bSpotted = GetFieldOffset("EntitySpottedState_t", "m_bSpotted");
                 m_flFlashDuration = GetFieldOffset("C_CSPlayerPawnBase", "m_flFlashDuration");
                 
+                // Player State fields
+                m_bIsBuyMenuOpen = GetFieldOffset("C_CSPlayerPawn", "m_bIsBuyMenuOpen");
+                m_bIsScoped = GetFieldOffset("C_CSPlayerPawn", "m_bIsScoped");
+                m_bIsDefusing = GetFieldOffset("C_CSPlayerPawn", "m_bIsDefusing");
+                m_bIsGrabbingHostage = GetFieldOffset("C_CSPlayerPawn", "m_bIsGrabbingHostage");
+                m_bPawnHasDefuser = GetFieldOffset("CCSPlayerController", "m_bPawnHasDefuser");
+
                 // C_PlantedC4 fields
                 m_flDefuseCountDown = GetFieldOffset("C_PlantedC4", "m_flDefuseCountDown");
                 m_flC4Blow = GetFieldOffset("C_PlantedC4", "m_flC4Blow");

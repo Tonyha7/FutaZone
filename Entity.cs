@@ -29,6 +29,13 @@ namespace FutaZone
         public bool isLocalPlayer { get; set; }
         public bool isSpotted { get; set; }
         public float flashDuration { get; set; }
+
+        // Player State
+        public bool isBuyMenuOpen { get; set; }
+        public bool isScoped { get; set; }
+        public bool isDefusing { get; set; }
+        public bool isGrabbingHostage { get; set; }
+        public bool hasDefuser { get; set; }
     }
 
     public enum BoneIds
