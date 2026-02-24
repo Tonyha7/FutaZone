@@ -28,6 +28,10 @@ namespace FutaZone
         public int SoundEspStyle { get; set; }
         public float[] SoundEspColor { get; set; } = new float[] { 1.0f, 0.0f, 0.0f, 1.0f };
 
+        // Global Tint
+        public bool EnableTint { get; set; } = false;
+        public float[] TintColor { get; set; } = new float[] { 0.0f, 0.0f, 0.0f, 0.5f };
+
         // Misc Visuals
         public bool EnableBombTimer { get; set; } = true;
         public bool EnableWatermark { get; set; } = true;

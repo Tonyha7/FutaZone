@@ -64,7 +64,19 @@ namespace FutaZone
                     using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(5));
                     var response = await client.GetAsync(primaryUrl, cts.Token);
                     response.EnsureSuccessStatusCode();
-                    return await response.Content.ReadAsStringAsync();
+                    string content = await response.Content.ReadAsStringAsync();
+
+                    // Validate JSON completeness
+                    try 
+                    {
+                        using (JsonDocument.Parse(content)) { }
+                    }
+                    catch (JsonException)
+                    {
+                        throw new Exception("Get JSON is incomplete or invalid.");
+                    }
+
+                    return content;
                 }
                 catch (Exception ex)
                 {
@@ -78,8 +90,8 @@ namespace FutaZone
                 // Fetch offsets from URL directly
                 Console.WriteLine("Fetching offsets.json...");
                 string offsetsJson = await FetchJsonWithFallbackAsync(
-                    "https://raw.githubusercontent.com/a2x/cs2-dumper/refs/heads/main/output/offsets.json",
-                    "https://ob.tonyha7.com/offsets.json"
+                    "https://ob.tonyha7.com/offsets.json",
+                    "https://raw.githubusercontent.com/a2x/cs2-dumper/refs/heads/main/output/offsets.json"
                 );
                 
                 using JsonDocument offsetsDoc = JsonDocument.Parse(offsetsJson);
@@ -94,8 +106,8 @@ namespace FutaZone
 
                 Console.WriteLine("Fetching client_dll.json...");
                 string clientDllJson = await FetchJsonWithFallbackAsync(
-                    "https://raw.githubusercontent.com/a2x/cs2-dumper/refs/heads/main/output/client_dll.json",
-                    "https://ob.tonyha7.com/client_dll.json"
+                    "https://ob.tonyha7.com/client_dll.json",
+                    "https://raw.githubusercontent.com/a2x/cs2-dumper/refs/heads/main/output/client_dll.json"
                 );
                 
                 using JsonDocument clientDllDoc = JsonDocument.Parse(clientDllJson);

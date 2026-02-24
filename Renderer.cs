@@ -48,6 +48,10 @@ namespace FutaZone
         private Vector4 soundESPColor = new Vector4(1.0f, 0.0f, 0.0f, 1.0f); // Red for SoundESP
         private Vector4 aimbotFovColor = new Vector4(1.0f, 0.6f, 0.75f, 0.6f); // Semi-transparent sakura pink for aimbot FOV
         
+        // Tint
+        private bool enableTint = false;
+        private Vector4 tintColor = new Vector4(0.0f, 0.0f, 0.0f, 0.5f);
+
         float boneThickness = 2.0f;
 
         private enum Language { English = 0, Chinese = 1 }
@@ -207,6 +211,16 @@ namespace FutaZone
             {
                 InitializeStyle();
                 styleInitialized = true;
+            }
+
+            // Draw Fullscreen Tint
+            if (enableTint)
+            {
+                ImGui.GetBackgroundDrawList().AddRectFilled(
+                    new Vector2(0, 0), 
+                    screenSize, 
+                    ImGui.ColorConvertFloat4ToU32(tintColor)
+                );
             }
 
             // Check for INS key to toggle UI
@@ -544,6 +558,16 @@ namespace FutaZone
                     }
                 }
                 
+                // Overlay / Visuals feature group
+                if (ImGui.CollapsingHeader(isCN ? "Overlay & Tint (叠加层与色调)" : "Overlay & Tint", ImGuiTreeNodeFlags.DefaultOpen))
+                {
+                    ImGui.Checkbox(isCN ? "Enable Screen Tint (开启屏幕色调)" : "Enable Screen Tint", ref enableTint);
+                    if (enableTint)
+                    {
+                        ImGui.ColorEdit4(isCN ? "Tint Color (色调颜色)" : "Tint Color", ref tintColor, ImGuiColorEditFlags.AlphaBar | ImGuiColorEditFlags.AlphaPreviewHalf);
+                    }
+                }
+
                 ImGui.Checkbox(isCN ? "Enable Bomb Timer (C4计时器)" : "Enable Bomb Timer", ref enableBombTimer);
                 ImGui.Checkbox(isCN ? "Enable Watermark (水印)" : "Enable Watermark", ref enableWatermark);
                 if (ImGui.Checkbox(isCN ? "Enable VSync (垂直同步)" : "Enable VSync", ref vsync)) VSync = vsync;
@@ -1086,6 +1110,14 @@ namespace FutaZone
             espMode = (EspMode)cfg.EspMode;
             showTeammates = cfg.ShowTeammates;
             teamColor = ConfigSystem.ToVector4(cfg.TeamColor);
+            
+            // Tint
+            enableTint = cfg.EnableTint;
+            if (cfg.TintColor != null && cfg.TintColor.Length == 4)
+            {
+                tintColor = ConfigSystem.ToVector4(cfg.TintColor);
+            }
+
             enemyColor = ConfigSystem.ToVector4(cfg.EnemyColor);
             bonesColor = ConfigSystem.ToVector4(cfg.BonesColor);
             
@@ -1165,6 +1197,10 @@ namespace FutaZone
             cfg.EnableSoundESP = enableSoundESP;
             cfg.SoundEspStyle = (int)soundEspStyle;
             cfg.SoundEspColor = ConfigSystem.ToFloatArray(soundESPColor);
+
+            // Tint
+            cfg.EnableTint = enableTint;
+            cfg.TintColor = ConfigSystem.ToFloatArray(tintColor);
 
             // Misc
             cfg.EnableBombTimer = enableBombTimer;
