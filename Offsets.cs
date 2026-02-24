@@ -48,12 +48,33 @@ namespace FutaZone
         public static async Task InitializeAsync()
         {
             using HttpClient client = new HttpClient();
+            client.Timeout = TimeSpan.FromSeconds(5);
+
+            async Task<string> FetchJsonWithFallbackAsync(string primaryUrl, string fallbackUrl)
+            {
+                try
+                {
+                    Console.WriteLine($"Attempting to fetch from: {primaryUrl}");
+                    using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(5));
+                    var response = await client.GetAsync(primaryUrl, cts.Token);
+                    response.EnsureSuccessStatusCode();
+                    return await response.Content.ReadAsStringAsync();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Primary fetch failed ({ex.Message}). Falling back to: {fallbackUrl}");
+                    return await client.GetStringAsync(fallbackUrl);
+                }
+            }
             
             try
             {
                 // Fetch offsets from URL directly
-                Console.WriteLine("Fetching offsets.json from URL...");
-                string offsetsJson = await client.GetStringAsync("https://ob.tonyha7.com/offsets.json");
+                Console.WriteLine("Fetching offsets.json...");
+                string offsetsJson = await FetchJsonWithFallbackAsync(
+                    "https://raw.githubusercontent.com/a2x/cs2-dumper/refs/heads/main/output/offsets.json",
+                    "https://ob.tonyha7.com/offsets.json"
+                );
                 
                 using JsonDocument offsetsDoc = JsonDocument.Parse(offsetsJson);
                 var clientDllOffsets = offsetsDoc.RootElement.GetProperty("client.dll");
@@ -65,8 +86,11 @@ namespace FutaZone
                 dwGlobalVars = clientDllOffsets.GetProperty("dwGlobalVars").GetInt32();
                 dwPlantedC4 = clientDllOffsets.GetProperty("dwPlantedC4").GetInt32();
 
-                Console.WriteLine("Fetching client_dll.json from URL...");
-                string clientDllJson = await client.GetStringAsync("https://ob.tonyha7.com/client_dll.json");
+                Console.WriteLine("Fetching client_dll.json...");
+                string clientDllJson = await FetchJsonWithFallbackAsync(
+                    "https://raw.githubusercontent.com/a2x/cs2-dumper/refs/heads/main/output/client_dll.json",
+                    "https://ob.tonyha7.com/client_dll.json"
+                );
                 
                 using JsonDocument clientDllDoc = JsonDocument.Parse(clientDllJson);
                 var classes = clientDllDoc.RootElement.GetProperty("client.dll").GetProperty("classes");
