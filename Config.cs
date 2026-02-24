@@ -35,6 +35,7 @@ namespace FutaZone
         
         // Aimbot
         public bool EnableAimbot { get; set; }
+        public float[] AimbotFovColor { get; set; } = new float[] { 1.0f, 0.6f, 0.75f, 0.6f };
         public float AimbotFOV { get; set; } = 250f;
         public float AimbotSmoothness { get; set; } = 3.0f;
         public bool AimAtTeammates { get; set; }

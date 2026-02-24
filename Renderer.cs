@@ -45,7 +45,8 @@ namespace FutaZone
         private Vector4 teamColor = new Vector4(0.6f, 0.827f, 0.0f, 1.0f); // Lime green for team
         private Vector4 bonesColor = new Vector4(0.5f, 0.0f, 0.5f, 1.0f); // Deep purple for bones
         private Vector4 soundESPColor = new Vector4(1.0f, 0.0f, 0.0f, 1.0f); // Red for SoundESP
-
+        private Vector4 aimbotFovColor = new Vector4(1.0f, 0.6f, 0.75f, 0.6f); // Semi-transparent sakura pink for aimbot FOV
+        
         float boneThickness = 2.0f;
 
         private enum Language { English = 0, Chinese = 1 }
@@ -309,6 +310,8 @@ namespace FutaZone
                         float fov = Aimbot.Instance.FOV;
                         if (ImGui.SliderFloat(isCN ? "FOV (范围)" : "FOV", ref fov, 32f, 800f)) Aimbot.Instance.FOV = fov;
                         
+                        ImGui.ColorEdit4(isCN ? "FOV Color (范围颜色)" : "FOV Color", ref aimbotFovColor);
+
                         float smoothness = Aimbot.Instance.Smoothness;
                         if (ImGui.SliderFloat(isCN ? "Smoothness (平滑度)" : "Smoothness", ref smoothness, 0.1f, 50.0f)) Aimbot.Instance.Smoothness = smoothness;
                         
@@ -554,7 +557,7 @@ namespace FutaZone
             if (Aimbot.Instance.Enabled)
             {
                 Vector2 screenCenter = new Vector2(screenSize.X / 2f, screenSize.Y / 2f);
-                uint circleColor = ImGui.ColorConvertFloat4ToU32(new Vector4(1.0f, 0.6f, 0.75f, 0.6f)); // Sakura pink
+                uint circleColor = ImGui.ColorConvertFloat4ToU32(aimbotFovColor);
                 float visualRadius = Aimbot.Instance.FOV * 0.5f;
                 drawList.AddCircle(screenCenter, visualRadius, circleColor, 32, 2.0f);
 
@@ -1052,6 +1055,12 @@ namespace FutaZone
             // Aimbot
             enableAimbot = cfg.EnableAimbot;
             Aimbot.Instance.Enabled = cfg.EnableAimbot;
+            
+            if (cfg.AimbotFovColor != null && cfg.AimbotFovColor.Length == 4)
+            {
+                aimbotFovColor = ConfigSystem.ToVector4(cfg.AimbotFovColor);
+            }
+            
             Aimbot.Instance.FOV = cfg.AimbotFOV;
             Aimbot.Instance.Smoothness = cfg.AimbotSmoothness;
             Aimbot.Instance.AimAtTeammates = cfg.AimAtTeammates;
@@ -1113,6 +1122,7 @@ namespace FutaZone
             
             // Aimbot
             cfg.EnableAimbot = enableAimbot;
+            cfg.AimbotFovColor = ConfigSystem.ToFloatArray(aimbotFovColor);
             cfg.AimbotFOV = Aimbot.Instance.FOV;
             cfg.AimbotSmoothness = Aimbot.Instance.Smoothness;
             cfg.AimAtTeammates = Aimbot.Instance.AimAtTeammates;
