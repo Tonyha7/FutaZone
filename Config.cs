@@ -37,6 +37,7 @@ namespace FutaZone
         public bool EnableWatermark { get; set; } = true;
         public bool EnableHitSound { get; set; } = true;
         public string HitSoundFile { get; set; } = "";
+        public bool EnableAntiCapture { get; set; } = false;
         
         // Aimbot
         public bool EnableAimbot { get; set; }

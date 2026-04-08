@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Numerics;
 using System.Runtime.InteropServices;
+using System.Security.Principal;
 using ClickableTransparentOverlay;
 using ImGuiNET;
 
@@ -12,7 +13,39 @@ namespace FutaZone
     {
         [DllImport("user32.dll")]
         static extern int GetSystemMetrics(int nIndex);
+        
+        [DllImport("user32.dll", ExactSpelling = true)]
+        public static extern bool SetWindowDisplayAffinity(IntPtr hWnd, uint dwAffinity);
 
+        [DllImport("user32.dll", SetLastError = true)]
+        static extern IntPtr GetActiveWindow();
+
+        [DllImport("user32.dll", SetLastError = true)]
+        static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+        
+        delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
+        private void ApplyAntiCapture(bool enable)
+        {
+            uint currentProcessId = (uint)System.Diagnostics.Process.GetCurrentProcess().Id;
+            EnumWindows((hWnd, lParam) =>
+            {
+                GetWindowThreadProcessId(hWnd, out uint processId);
+                if (processId == currentProcessId)
+                {
+                    SetWindowDisplayAffinity(hWnd, enable ? WDA_EXCLUDEFROMCAPTURE : WDA_NONE);
+                }
+                return true;
+            }, IntPtr.Zero);
+        }
+
+        private const uint WDA_NONE = 0x00000000;
+        private const uint WDA_EXCLUDEFROMCAPTURE = 0x00000011;
+        
         private const int SM_CXSCREEN = 0;
         private const int SM_CYSCREEN = 1;
 
@@ -30,6 +63,9 @@ namespace FutaZone
         private bool enablePlayerState = false;
         private bool enableBombTimer = true;
         private bool enableWatermark = true;
+        private bool enableAntiCapture = false;
+        private float adminWarningEndTime = 0f;
+        private bool isAdmin = false;
         private bool enableAimbot = false;
         private bool showAimTarget = false;
         private bool enableTriggerBot = false;
@@ -176,6 +212,13 @@ namespace FutaZone
 
         public Renderer()
         {
+            // Check Admin
+            using (WindowsIdentity identity = WindowsIdentity.GetCurrent())
+            {
+                WindowsPrincipal principal = new WindowsPrincipal(identity);
+                isAdmin = principal.IsInRole(WindowsBuiltInRole.Administrator);
+            }
+
             // Enable VSync
             VSync = true;
             
@@ -210,6 +253,15 @@ namespace FutaZone
             if (!styleInitialized)
             {
                 InitializeStyle();
+                if (enableAntiCapture && !isAdmin)
+                {
+                    adminWarningEndTime = (float)ImGui.GetTime() + 5.0f;
+                    enableAntiCapture = false; // Revert locally
+                }
+                else
+                {
+                    ApplyAntiCapture(enableAntiCapture); // Apply it once at start
+                }
                 styleInitialized = true;
             }
 
@@ -570,6 +622,20 @@ namespace FutaZone
 
                 ImGui.Checkbox(isCN ? "Enable Bomb Timer (C4计时器)" : "Enable Bomb Timer", ref enableBombTimer);
                 ImGui.Checkbox(isCN ? "Enable Watermark (水印)" : "Enable Watermark", ref enableWatermark);
+                
+                if (ImGui.Checkbox(isCN ? "Anti-Capture (防截图)" : "Anti-Capture (Stream Proof)", ref enableAntiCapture))
+                {
+                    if (enableAntiCapture && !isAdmin)
+                    {
+                        adminWarningEndTime = (float)ImGui.GetTime() + 5.0f;
+                        enableAntiCapture = false; // Revert locally
+                    }
+                    else
+                    {
+                        ApplyAntiCapture(enableAntiCapture);
+                    }
+                }
+
                 if (ImGui.Checkbox(isCN ? "Enable VSync (垂直同步)" : "Enable VSync", ref vsync)) VSync = vsync;
                 ImGui.Text(isCN ? "Press INS to show/hide menu (按INS显示/隐藏菜单)" : "Press INS to show/hide menu");
                 ImGui.End(); // End "FutaZone ESP"
@@ -660,6 +726,30 @@ namespace FutaZone
             if (enableBombTimer && BombTimer.IsBombPlanted)
             {
                 DrawBombTimer();
+            }
+
+            if ((float)ImGui.GetTime() < adminWarningEndTime)
+            {
+                string warnText = currentLanguage == Language.Chinese 
+                    ? "防截图需要管理员权限才能生效" 
+                    : "Anti-Capture requires Administrator privileges";
+                
+                ImFontPtr font = ImGui.GetFont();
+                float fontSize = ImGui.GetFontSize() * 2.0f; // Scale up the text size (simulating bold/larger)
+                Vector2 textSize = ImGui.CalcTextSize(warnText) * 2.0f; // Approximate size
+                Vector2 textPos = new Vector2((screenSize.X - textSize.X) / 2.0f, (screenSize.Y - textSize.Y) / 2.0f);
+
+                uint colorRed = ImGui.ColorConvertFloat4ToU32(new Vector4(1.0f, 0.0f, 0.0f, 1.0f));
+                uint colorBlack = ImGui.ColorConvertFloat4ToU32(new Vector4(0.0f, 0.0f, 0.0f, 1.0f));
+
+                // Draw shadow/outline
+                drawList.AddText(font, fontSize, new Vector2(textPos.X + 2, textPos.Y + 2), colorBlack, warnText);
+                drawList.AddText(font, fontSize, new Vector2(textPos.X - 2, textPos.Y - 2), colorBlack, warnText);
+                drawList.AddText(font, fontSize, new Vector2(textPos.X + 2, textPos.Y - 2), colorBlack, warnText);
+                drawList.AddText(font, fontSize, new Vector2(textPos.X - 2, textPos.Y + 2), colorBlack, warnText);
+                
+                // Draw text
+                drawList.AddText(font, fontSize, textPos, colorRed, warnText);
             }
         }
 
@@ -1130,6 +1220,18 @@ namespace FutaZone
             // Misc
             enableBombTimer = cfg.EnableBombTimer;
             enableWatermark = cfg.EnableWatermark;
+            
+            enableAntiCapture = cfg.EnableAntiCapture;
+            if (enableAntiCapture && !isAdmin)
+            {
+                adminWarningEndTime = (float)ImGui.GetTime() + 5.0f;
+                enableAntiCapture = false; // Revert locally
+            }
+            else
+            {
+                ApplyAntiCapture(enableAntiCapture);
+            }
+            
             enableHitSound = cfg.EnableHitSound;
             hitSoundFile = cfg.HitSoundFile;
             if (string.IsNullOrEmpty(hitSoundFile)) hitSoundFile = "Default";
@@ -1205,6 +1307,7 @@ namespace FutaZone
             // Misc
             cfg.EnableBombTimer = enableBombTimer;
             cfg.EnableWatermark = enableWatermark;
+            cfg.EnableAntiCapture = enableAntiCapture;
             cfg.EnableHitSound = enableHitSound;
             cfg.HitSoundFile = hitSoundFile;
             
