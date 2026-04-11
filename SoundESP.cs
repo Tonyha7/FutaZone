@@ -186,7 +186,7 @@ namespace FutaZone
             }
         }
 
-        public static void Render(float[] viewMatrix, Vector2 screenSize, ImDrawListPtr drawList, Vector4 baseColor)
+        public static void Render(float[] viewMatrix, Vector2 screenSize, ImDrawListPtr drawList, Vector4 baseColor, bool enableSoundEspGradient = false, Vector4 soundESPColor2 = default)
         {
             if (soundEffects.Count == 0)
                 return;
@@ -215,6 +215,12 @@ namespace FutaZone
                     float radius = startRadius + (MaxRadius - startRadius) * progress;
                     
                     Vector4 color = baseColor;
+                    if (enableSoundEspGradient)
+                    {
+                        color.X += (soundESPColor2.X - baseColor.X) * progress;
+                        color.Y += (soundESPColor2.Y - baseColor.Y) * progress;
+                        color.Z += (soundESPColor2.Z - baseColor.Z) * progress;
+                    }
                     color.W *= (1.0f - progress);
 
                     RenderSound(soundEffect.origin, radius, color, viewMatrix, screenSize, drawList);
@@ -241,7 +247,14 @@ namespace FutaZone
                         var sound = sounds[i];
                         float elapsed = (float)(currentTime - sound.spawnTime);
                         float progress = Math.Clamp(elapsed / duration, 0.0f, 1.0f);
+                        
                         Vector4 color = baseColor;
+                        if (enableSoundEspGradient)
+                        {
+                            color.X += (soundESPColor2.X - baseColor.X) * progress;
+                            color.Y += (soundESPColor2.Y - baseColor.Y) * progress;
+                            color.Z += (soundESPColor2.Z - baseColor.Z) * progress;
+                        }
                         color.W *= (1.0f - progress);
 
                         if (Style == 1)

@@ -81,7 +81,14 @@ namespace FutaZone
 
         private Vector4 teamColor = new Vector4(0.6f, 0.827f, 0.0f, 1.0f); // Lime green for team
         private Vector4 bonesColor = new Vector4(0.5f, 0.0f, 0.5f, 1.0f); // Deep purple for bones
+        private bool enableEspGradient = false;
+        private Vector4 teamColor2 = new Vector4(0.4f, 0.6f, 0.0f, 1.0f);
+        private Vector4 enemyColor2 = new Vector4(0.8f, 0.4f, 0.5f, 1.0f);
+        private Vector4 bonesColor2 = new Vector4(0.3f, 0.0f, 0.3f, 1.0f);
+        
         private Vector4 soundESPColor = new Vector4(1.0f, 0.0f, 0.0f, 1.0f); // Red for SoundESP
+        private bool enableSoundEspGradient = false;
+        private Vector4 soundESPColor2 = new Vector4(1.0f, 0.5f, 0.0f, 1.0f);
         private Vector4 aimbotFovColor = new Vector4(1.0f, 0.6f, 0.75f, 0.6f); // Semi-transparent sakura pink for aimbot FOV
         
         // Tint
@@ -357,11 +364,24 @@ namespace FutaZone
                             ImGui.ColorEdit4(isCN ? "Team Color (队伍颜色)" : "Team Color", ref teamColor);
                             ImGui.ColorEdit4(isCN ? "Enemy Color (敌人颜色)" : "Enemy Color", ref enemyColor);
                             ImGui.ColorEdit4(isCN ? "Bones Color (骨骼颜色)" : "Bone Color", ref bonesColor);
+                            
+                            ImGui.Checkbox(isCN ? "Enable Gradient (启用渐变)" : "Enable Gradient", ref enableEspGradient);
+                            if (enableEspGradient) 
+                            {
+                                ImGui.ColorEdit4(isCN ? "Team Gr. (队伍次要颜色)" : "Team Gradient", ref teamColor2);
+                                ImGui.ColorEdit4(isCN ? "Enemy Gr. (敌人次要颜色)" : "Enemy Gradient", ref enemyColor2);
+                                ImGui.ColorEdit4(isCN ? "Bone Gr. (骨骼次要颜色)" : "Bone Gradient", ref bonesColor2);
+                            }
                         }
 
                         if (enableSoundESP)
                         {
                             ImGui.ColorEdit4(isCN ? "SoundESP Color (声音透视颜色)" : "SoundESP Color", ref soundESPColor);
+                            ImGui.Checkbox(isCN ? "Sound Gradient (声音渐变)" : "Sound Gradient", ref enableSoundEspGradient);
+                            if (enableSoundEspGradient)
+                            {
+                                ImGui.ColorEdit4(isCN ? "Sound Gr. (声音次要颜色)" : "Sound Gradient", ref soundESPColor2);
+                            }
                         }
 
                     }
@@ -714,7 +734,7 @@ namespace FutaZone
                 
                 if (enableSoundESP)
                 {
-                    SoundESP.Render(viewMatrix, screenSize, drawList, soundESPColor);
+                    SoundESP.Render(viewMatrix, screenSize, drawList, soundESPColor, enableSoundEspGradient, soundESPColor2);
                 }
             }
 
@@ -908,43 +928,60 @@ namespace FutaZone
             return entity.position2D.X >= 0 && entity.position2D.X <= screenSize.X && entity.position2D.Y >= 0 && entity.position2D.Y <= screenSize.Y;
         }
 
+        private Vector4 GetSpatialColor(Vector4 topColor, Vector4 bottomColor, float y, float minY, float maxY, bool enable)
+        {
+            if (!enable || maxY <= minY) return topColor;
+            float t = Math.Clamp((y - minY) / (maxY - minY), 0.0f, 1.0f);
+            return Vector4.Lerp(topColor, bottomColor, t);
+        }
+
         private void DrawBox(Entity entity)
         {
             float entityHight = entity.position2D.Y - entity.viewPosition2D.Y;
             Vector2 recTop = new Vector2(entity.viewPosition2D.X - entityHight / 3, entity.viewPosition2D.Y);
             Vector2 rectBottom = new Vector2(entity.position2D.X + entityHight / 3, entity.position2D.Y);
-            Vector4 boxColor;
-            if (espMode == EspMode.Ffa)
-                boxColor = enemyColor;
-            else
-                boxColor = localPlayer.team == entity.team ? teamColor : enemyColor;
 
-            uint col = ImGui.ColorConvertFloat4ToU32(boxColor);
-            
+            Vector4 topColor = espMode == EspMode.Ffa ? enemyColor : (localPlayer.team == entity.team ? teamColor : enemyColor);
+            Vector4 bottomColor = espMode == EspMode.Ffa ? enemyColor2 : (localPlayer.team == entity.team ? teamColor2 : enemyColor2);
+            if (!enableEspGradient) bottomColor = topColor;
+
+            uint colTop = ImGui.ColorConvertFloat4ToU32(topColor);
+            uint colBot = ImGui.ColorConvertFloat4ToU32(bottomColor);
+
             if (espStyle == EspStyle.FullBox)
             {
-                drawList.AddRect(recTop, rectBottom, col);
+                // Left
+                drawList.AddRectFilledMultiColor(new Vector2(recTop.X - 1, recTop.Y - 1), new Vector2(recTop.X, rectBottom.Y + 1), colTop, colTop, colBot, colBot);
+                // Right
+                drawList.AddRectFilledMultiColor(new Vector2(rectBottom.X, recTop.Y - 1), new Vector2(rectBottom.X + 1, rectBottom.Y + 1), colTop, colTop, colBot, colBot);
+                // Top
+                drawList.AddRectFilledMultiColor(new Vector2(recTop.X, recTop.Y - 1), new Vector2(rectBottom.X, recTop.Y), colTop, colTop, colTop, colTop);
+                // Bottom
+                drawList.AddRectFilledMultiColor(new Vector2(recTop.X, rectBottom.Y), new Vector2(rectBottom.X, rectBottom.Y + 1), colBot, colBot, colBot, colBot);
             }
             else if (espStyle == EspStyle.CornerBox)
             {
                 float lineW = (rectBottom.X - recTop.X) / 4;
                 float lineH = (rectBottom.Y - recTop.Y) / 4;
                 
+                uint colMidTop = ImGui.ColorConvertFloat4ToU32(GetSpatialColor(topColor, bottomColor, recTop.Y + lineH, recTop.Y, rectBottom.Y, enableEspGradient));
+                uint colMidBot = ImGui.ColorConvertFloat4ToU32(GetSpatialColor(topColor, bottomColor, rectBottom.Y - lineH, recTop.Y, rectBottom.Y, enableEspGradient));
+
                 // Top left
-                drawList.AddLine(new Vector2(recTop.X, recTop.Y), new Vector2(recTop.X + lineW, recTop.Y), col);
-                drawList.AddLine(new Vector2(recTop.X, recTop.Y), new Vector2(recTop.X, recTop.Y + lineH), col);
+                drawList.AddRectFilledMultiColor(new Vector2(recTop.X, recTop.Y), new Vector2(recTop.X + lineW, recTop.Y + 1), colTop, colTop, colTop, colTop);
+                drawList.AddRectFilledMultiColor(new Vector2(recTop.X, recTop.Y), new Vector2(recTop.X + 1, recTop.Y + lineH), colTop, colTop, colMidTop, colMidTop);
                 
                 // Top right
-                drawList.AddLine(new Vector2(rectBottom.X, recTop.Y), new Vector2(rectBottom.X - lineW, recTop.Y), col);
-                drawList.AddLine(new Vector2(rectBottom.X, recTop.Y), new Vector2(rectBottom.X, recTop.Y + lineH), col);
+                drawList.AddRectFilledMultiColor(new Vector2(rectBottom.X - lineW, recTop.Y), new Vector2(rectBottom.X, recTop.Y + 1), colTop, colTop, colTop, colTop);
+                drawList.AddRectFilledMultiColor(new Vector2(rectBottom.X - 1, recTop.Y), new Vector2(rectBottom.X, recTop.Y + lineH), colTop, colTop, colMidTop, colMidTop);
                 
                 // Bottom left
-                drawList.AddLine(new Vector2(recTop.X, rectBottom.Y), new Vector2(recTop.X + lineW, rectBottom.Y), col);
-                drawList.AddLine(new Vector2(recTop.X, rectBottom.Y), new Vector2(recTop.X, rectBottom.Y - lineH), col);
+                drawList.AddRectFilledMultiColor(new Vector2(recTop.X, rectBottom.Y - 1), new Vector2(recTop.X + lineW, rectBottom.Y), colBot, colBot, colBot, colBot);
+                drawList.AddRectFilledMultiColor(new Vector2(recTop.X, rectBottom.Y - lineH), new Vector2(recTop.X + 1, rectBottom.Y), colMidBot, colMidBot, colBot, colBot);
                 
                 // Bottom right
-                drawList.AddLine(new Vector2(rectBottom.X, rectBottom.Y), new Vector2(rectBottom.X - lineW, rectBottom.Y), col);
-                drawList.AddLine(new Vector2(rectBottom.X, rectBottom.Y), new Vector2(rectBottom.X, rectBottom.Y - lineH), col);
+                drawList.AddRectFilledMultiColor(new Vector2(rectBottom.X - lineW, rectBottom.Y - 1), new Vector2(rectBottom.X, rectBottom.Y), colBot, colBot, colBot, colBot);
+                drawList.AddRectFilledMultiColor(new Vector2(rectBottom.X - 1, rectBottom.Y - lineH), new Vector2(rectBottom.X, rectBottom.Y), colMidBot, colMidBot, colBot, colBot);
             }
             else if (espStyle == EspStyle.Circle3D)
             {
@@ -977,7 +1014,7 @@ namespace FutaZone
                     {
                         Vector2 p1 = points[i];
                         Vector2 p2 = points[(i + 1) % segments];
-                        drawList.AddLine(p1, p2, col, 2.0f);
+                        drawList.AddLine(p1, p2, colBot, 2.0f);
                     }
                 }
             }
@@ -1014,7 +1051,7 @@ namespace FutaZone
                     {
                         Vector2 p1 = starVertices[i];
                         Vector2 p2 = starVertices[(i + 1) % starPoints];
-                        drawList.AddLine(p1, p2, col, 2.0f);
+                        drawList.AddLine(p1, p2, colBot, 2.0f);
                     }
                 }
             }
@@ -1041,7 +1078,7 @@ namespace FutaZone
                 float textX = recTop.X;
                 float textY = recTop.Y - textOffset;
                 if (textY < 0) textY = recTop.Y + 2.0f; // if would go off-screen, draw inside box
-                drawList.AddText(new Vector2(textX, textY), col, displayName);
+                drawList.AddText(new Vector2(textX, textY), colTop, displayName);
             }
         }
 
@@ -1071,12 +1108,15 @@ namespace FutaZone
             float totalHeight = MathF.Max(1.0f, barBottom.Y - barTop.Y);
             float filledHeight = totalHeight * Math.Clamp(healthPercent, 0f, 1f);
             float filledTopY = barBottom.Y - filledHeight;
-            Vector4 healthColor;
-            if (espMode == EspMode.Ffa)
-                healthColor = enemyColor;
-            else
-                healthColor = localPlayer.team == entity.team ? teamColor : enemyColor;
-            drawList.AddRectFilled(new Vector2(barX1, filledTopY), barBottom, ImGui.ColorConvertFloat4ToU32(healthColor));
+            
+            Vector4 topColor = espMode == EspMode.Ffa ? enemyColor : (localPlayer.team == entity.team ? teamColor : enemyColor);
+            Vector4 bottomColor = espMode == EspMode.Ffa ? enemyColor2 : (localPlayer.team == entity.team ? teamColor2 : enemyColor2);
+            if (!enableEspGradient) bottomColor = topColor;
+
+            uint colHealthTop = ImGui.ColorConvertFloat4ToU32(GetSpatialColor(topColor, bottomColor, filledTopY, barTop.Y, barBottom.Y, enableEspGradient));
+            uint colHealthBot = ImGui.ColorConvertFloat4ToU32(bottomColor);
+
+            drawList.AddRectFilledMultiColor(new Vector2(barX1, filledTopY), barBottom, colHealthTop, colHealthTop, colHealthBot, colHealthBot);
         }
 
         private void DrawPlayerState(Entity entity)
@@ -1087,11 +1127,7 @@ namespace FutaZone
             float textX = boxRightX + 4.0f;
             float textY = entity.viewPosition2D.Y;
 
-            Vector4 stateColor;
-            if (espMode == EspMode.Ffa)
-                stateColor = enemyColor;
-            else
-                stateColor = localPlayer.team == entity.team ? teamColor : enemyColor;
+            Vector4 stateColor = espMode == EspMode.Ffa ? enemyColor : (localPlayer.team == entity.team ? teamColor : enemyColor);
 
             uint col = ImGui.ColorConvertFloat4ToU32(stateColor);
             
@@ -1130,31 +1166,42 @@ namespace FutaZone
         {
             if (entity.bones2d == null || entity.bones2d.Count < 13) return;
 
-            uint col = ImGui.ColorConvertFloat4ToU32(bonesColor);
+            float minY = entity.viewPosition2D.Y;
+            float maxY = entity.position2D.Y;
+
             float thickness = boneThickness / Math.Max(1.0f, entity.distance);
-            
-            drawList.AddLine(entity.bones2d[1], entity.bones2d[2], col, boneThickness);
-            drawList.AddLine(entity.bones2d[1], entity.bones2d[3], col, boneThickness);
-            drawList.AddLine(entity.bones2d[1], entity.bones2d[6], col, boneThickness);
-            drawList.AddLine(entity.bones2d[3], entity.bones2d[4], col, boneThickness);
-            drawList.AddLine(entity.bones2d[6], entity.bones2d[7], col, boneThickness);
-            drawList.AddLine(entity.bones2d[4], entity.bones2d[5], col, boneThickness);
-            drawList.AddLine(entity.bones2d[7], entity.bones2d[8], col, boneThickness);
-            drawList.AddLine(entity.bones2d[1], entity.bones2d[0], col, boneThickness);
-            drawList.AddLine(entity.bones2d[0], entity.bones2d[9], col, boneThickness);
-            drawList.AddLine(entity.bones2d[0], entity.bones2d[11], col, boneThickness);
-            drawList.AddLine(entity.bones2d[9], entity.bones2d[10], col, boneThickness);
-            drawList.AddLine(entity.bones2d[11], entity.bones2d[12], col, boneThickness);
-            drawList.AddCircle(entity.bones2d[2], 3 + boneThickness, col);
+
+            void DrawBoneLine(int b1, int b2)
+            {
+                Vector2 p1 = entity.bones2d[b1];
+                Vector2 p2 = entity.bones2d[b2];
+                
+                float averageY = (p1.Y + p2.Y) * 0.5f;
+                uint c = ImGui.ColorConvertFloat4ToU32(GetSpatialColor(bonesColor, bonesColor2, averageY, minY, maxY, enableEspGradient));
+                
+                drawList.AddLine(p1, p2, c, thickness);
+            }
+
+            DrawBoneLine(1, 2);
+            DrawBoneLine(1, 3);
+            DrawBoneLine(1, 6);
+            DrawBoneLine(3, 4);
+            DrawBoneLine(6, 7);
+            DrawBoneLine(4, 5);
+            DrawBoneLine(7, 8);
+            DrawBoneLine(1, 0);
+            DrawBoneLine(0, 9);
+            DrawBoneLine(0, 11);
+            DrawBoneLine(9, 10);
+            DrawBoneLine(11, 12);
+
+            uint headCol = ImGui.ColorConvertFloat4ToU32(GetSpatialColor(bonesColor, bonesColor2, entity.bones2d[2].Y, minY, maxY, enableEspGradient));
+            drawList.AddCircle(entity.bones2d[2], 3 + thickness, headCol);
         }
 
         private void DrawLine(Entity entity)
         {
-            Vector4 lineColor;
-            if (espMode == EspMode.Ffa)
-                lineColor = enemyColor;
-            else
-                lineColor = localPlayer.team == entity.team ? teamColor : enemyColor;
+            Vector4 lineColor = espMode == EspMode.Ffa ? enemyColor : (localPlayer.team == entity.team ? teamColor : enemyColor);
             drawList.AddLine(new Vector2(screenSize.X / 2, screenSize.Y), entity.position2D, ImGui.ColorConvertFloat4ToU32(lineColor), 1.0f);
         }
 
@@ -1210,12 +1257,18 @@ namespace FutaZone
 
             enemyColor = ConfigSystem.ToVector4(cfg.EnemyColor);
             bonesColor = ConfigSystem.ToVector4(cfg.BonesColor);
+            enableEspGradient = cfg.EnableEspGradient;
+            teamColor2 = ConfigSystem.ToVector4(cfg.TeamColor2);
+            enemyColor2 = ConfigSystem.ToVector4(cfg.EnemyColor2);
+            bonesColor2 = ConfigSystem.ToVector4(cfg.BonesColor2);
             
             // SoundESP
             enableSoundESP = cfg.EnableSoundESP;
             soundEspStyle = (SoundEspStyle)cfg.SoundEspStyle;
             SoundESP.Style = cfg.SoundEspStyle;
             soundESPColor = ConfigSystem.ToVector4(cfg.SoundEspColor);
+            enableSoundEspGradient = cfg.EnableSoundEspGradient;
+            soundESPColor2 = ConfigSystem.ToVector4(cfg.SoundEspColor2);
 
             // Misc
             enableBombTimer = cfg.EnableBombTimer;
@@ -1294,11 +1347,17 @@ namespace FutaZone
             cfg.TeamColor = ConfigSystem.ToFloatArray(teamColor);
             cfg.EnemyColor = ConfigSystem.ToFloatArray(enemyColor);
             cfg.BonesColor = ConfigSystem.ToFloatArray(bonesColor);
+            cfg.EnableEspGradient = enableEspGradient;
+            cfg.TeamColor2 = ConfigSystem.ToFloatArray(teamColor2);
+            cfg.EnemyColor2 = ConfigSystem.ToFloatArray(enemyColor2);
+            cfg.BonesColor2 = ConfigSystem.ToFloatArray(bonesColor2);
             
             // SoundESP
             cfg.EnableSoundESP = enableSoundESP;
             cfg.SoundEspStyle = (int)soundEspStyle;
             cfg.SoundEspColor = ConfigSystem.ToFloatArray(soundESPColor);
+            cfg.EnableSoundEspGradient = enableSoundEspGradient;
+            cfg.SoundEspColor2 = ConfigSystem.ToFloatArray(soundESPColor2);
 
             // Tint
             cfg.EnableTint = enableTint;

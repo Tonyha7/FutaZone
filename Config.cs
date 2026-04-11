@@ -22,11 +22,17 @@ namespace FutaZone
         public float[] TeamColor { get; set; } = new float[] { 0.6f, 0.827f, 0.0f, 1.0f };
         public float[] EnemyColor { get; set; } = new float[] { 1.0f, 0.6f, 0.75f, 1.0f };
         public float[] BonesColor { get; set; } = new float[] { 0.5f, 0.0f, 0.5f, 1.0f };
+        public bool EnableEspGradient { get; set; }
+        public float[] TeamColor2 { get; set; } = new float[] { 0.4f, 0.6f, 0.0f, 1.0f };
+        public float[] EnemyColor2 { get; set; } = new float[] { 0.8f, 0.4f, 0.5f, 1.0f };
+        public float[] BonesColor2 { get; set; } = new float[] { 0.3f, 0.0f, 0.3f, 1.0f };
         
         // SoundESP
         public bool EnableSoundESP { get; set; }
         public int SoundEspStyle { get; set; }
         public float[] SoundEspColor { get; set; } = new float[] { 1.0f, 0.0f, 0.0f, 1.0f };
+        public bool EnableSoundEspGradient { get; set; }
+        public float[] SoundEspColor2 { get; set; } = new float[] { 1.0f, 0.5f, 0.0f, 1.0f };
 
         // Global Tint
         public bool EnableTint { get; set; } = false;
