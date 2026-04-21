@@ -34,15 +34,14 @@ namespace FutaZone
 
         public static List<Vector3> ReadBones(IntPtr boneAddress, Swed swed) 
         {
-            byte[] boneBytes = swed.ReadBytes(boneAddress, 27 * 32 + 16); //get max bone count (27) * size of each bone (32 bytes) + 16 bytes for the header
+            byte[] boneBytes = swed.ReadBytes(boneAddress, 30 * 32 + 16); 
             List<Vector3> bones = new List<Vector3>();
-            foreach (var boneId in Enum.GetValues(typeof(BoneIds))) 
+            for (int i = 0; i < 30; i++)
             {
-                float x = BitConverter.ToSingle(boneBytes, (int)boneId * 32 + 0);
-                float y = BitConverter.ToSingle(boneBytes, (int)boneId * 32 + 4);
-                float z = BitConverter.ToSingle(boneBytes, (int)boneId * 32 + 8);
-                Vector3 currentBone = new Vector3(x, y, z);
-                bones.Add(currentBone);
+                float x = BitConverter.ToSingle(boneBytes, i * 32 + 0);
+                float y = BitConverter.ToSingle(boneBytes, i * 32 + 4);
+                float z = BitConverter.ToSingle(boneBytes, i * 32 + 8);
+                bones.Add(new Vector3(x, y, z));
             }
             return bones;
         }

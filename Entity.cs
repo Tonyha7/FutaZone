@@ -40,18 +40,18 @@ namespace FutaZone
 
     public enum BoneIds
     {
-        Waist = 0,
-        Neck = 5, 
-        Head = 6,
-        ShoulderL = 8,
-        ForeL = 9,
+        Waist = 1,
+        Neck = 6, 
+        Head = 7,
+        ShoulderL = 9,
+        ForeL = 10,
         HandL = 11,
         ShoulderR = 13,
         ForeR = 14,
-        HandR = 16,
-        KneeL = 23,
-        feetL = 24,
-        KneeRight = 26,
-        feetR = 27
+        HandR = 15,
+        KneeL = 18,
+        feetL = 19,
+        KneeRight = 21,
+        feetR = 22
     }
 }

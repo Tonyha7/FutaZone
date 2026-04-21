@@ -695,9 +695,9 @@ namespace FutaZone
 
                         // Filter out huge entities (likely non-players or glitched models in casual mode)
                         // Standard distance waist-head is ~30 units. We allow up to 60 as a generous limit.
-                        if (entity.bones != null && entity.bones.Count > 6)
+                        if (entity.bones != null && entity.bones.Count > 7)
                         {
-                            float height3D = Vector3.Distance(entity.bones[0], entity.bones[6]);
+                            float height3D = Vector3.Distance(entity.bones[1], entity.bones[7]);
                             if (height3D > 60.0f) continue;
                         }
 
@@ -715,10 +715,10 @@ namespace FutaZone
                                 // If player is an observer (Team 1), only draw head circle and skip other visuals
                                 if (entity.team == 1 || entity.team == 0)
                                 {
-                                    if (entity.bones2d != null && entity.bones2d.Count > 2)
+                                    if (entity.bones2d != null && entity.bones2d.Count > 7)
                                     {
                                         uint headColor = ImGui.ColorConvertFloat4ToU32(new Vector4(1.0f, 1.0f, 1.0f, 1.0f)); // White for observer
-                                        drawList.AddCircle(entity.bones2d[2], 5.0f, headColor);
+                                        drawList.AddCircle(entity.bones2d[7], 5.0f, headColor);
                                     }
                                     continue;
                                 }
@@ -1164,7 +1164,7 @@ namespace FutaZone
 
         public void DrawBones(Entity entity)
         {
-            if (entity.bones2d == null || entity.bones2d.Count < 13) return;
+            if (entity.bones2d == null || entity.bones2d.Count < 24) return;
 
             float minY = entity.viewPosition2D.Y;
             float maxY = entity.position2D.Y;
@@ -1182,21 +1182,40 @@ namespace FutaZone
                 drawList.AddLine(p1, p2, c, thickness);
             }
 
+            // spine
             DrawBoneLine(1, 2);
-            DrawBoneLine(1, 3);
-            DrawBoneLine(1, 6);
-            DrawBoneLine(3, 4);
+            DrawBoneLine(2, 23);
+            DrawBoneLine(23, 6);
             DrawBoneLine(6, 7);
-            DrawBoneLine(4, 5);
-            DrawBoneLine(7, 8);
-            DrawBoneLine(1, 0);
-            DrawBoneLine(0, 9);
-            DrawBoneLine(0, 11);
-            DrawBoneLine(9, 10);
-            DrawBoneLine(11, 12);
 
-            uint headCol = ImGui.ColorConvertFloat4ToU32(GetSpatialColor(bonesColor, bonesColor2, entity.bones2d[2].Y, minY, maxY, enableEspGradient));
-            drawList.AddCircle(entity.bones2d[2], 3 + thickness, headCol);
+            // left arm
+            DrawBoneLine(6, 9);
+            DrawBoneLine(9, 10);
+            DrawBoneLine(10, 11);
+
+            // right arm
+            DrawBoneLine(6, 13);
+            DrawBoneLine(13, 14);
+            DrawBoneLine(14, 15);
+
+            // left leg
+            DrawBoneLine(1, 17);
+            DrawBoneLine(17, 18);
+            DrawBoneLine(18, 19);
+
+            // right leg
+            DrawBoneLine(1, 20);
+            DrawBoneLine(20, 21);
+            DrawBoneLine(21, 22);
+
+            uint headCol = ImGui.ColorConvertFloat4ToU32(GetSpatialColor(bonesColor, bonesColor2, entity.bones2d[7].Y, minY, maxY, enableEspGradient));
+            drawList.AddCircle(entity.bones2d[7], 3 + thickness, headCol);
+
+            // Print all bone indexes so you can identify the exact Head bone!
+            // for (int i = 0; i < entity.bones2d.Count; i++)
+            // {
+            //     drawList.AddText(entity.bones2d[i], ImGui.ColorConvertFloat4ToU32(new Vector4(1, 1, 1, 1)), i.ToString());
+            // }
         }
 
         private void DrawLine(Entity entity)

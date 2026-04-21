@@ -117,9 +117,17 @@ namespace FutaZone
 
                 // THE BONE CALCULATION
                 Vector2 targetBonePos = Vector2.Zero;
-                if (e.bones2d != null && e.bones2d.Count > TargetBoneIndex)
+                if (e.bones2d != null && e.bones2d.Count > 0)
                 {
-                    targetBonePos = e.bones2d[TargetBoneIndex];
+                    int boneIdVal = (int)((BoneIds[])Enum.GetValues(typeof(BoneIds)))[TargetBoneIndex];
+                    if (boneIdVal < e.bones2d.Count)
+                    {
+                        targetBonePos = e.bones2d[boneIdVal];
+                    }
+                    else
+                    {
+                        targetBonePos = e.viewPosition2D;
+                    }
                 }
                 else
                 {
